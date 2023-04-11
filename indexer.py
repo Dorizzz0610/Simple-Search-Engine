@@ -1,7 +1,6 @@
 import crawler
-import stopwords_remover
-import stemmer
-
+from nltk.stem.porter import PorterStemmer 
+from nltk.tokenize import word_tokenize
 
 # An indexer which extracts keywords from a page and inserts them into an inverted file
 
@@ -13,9 +12,38 @@ import stemmer
 # - The indexes must be able to support phrase search such as “hong kong” in page titles and page bodies.
 
 
+
+
+def remove_stopwords(text):
+    STOPWORDS = set(line.strip() for line in open('stopwords.txt'))
+
+
+    filtered_words = []
+    for word in text.split():
+        if word not in STOPWORDS:
+            filtered_words.append(word)
+
+
+
+
+
+
+def stem(tokenized_text):
+    stopwords = set(line.strip() for line in open('stopwords.txt')) 
+
+    stemmer = PorterStemmer() 
+
+    stemmed_words = [] 
+    for word in tokenized_text: 
+        stemmed_word = stemmer.stem(word) 
+        if stemmed_word not in stopwords: 
+            stemmed_words.append(stemmed_word) 
+
+
+
 def indexing(keyword_index, title_index, url, max_pages):
     # indexing the keywords and body of a set of crawled pages
-    
+
     crawled_result = crawler.crawl(url, max_pages)
     
     
@@ -23,11 +51,11 @@ def indexing(keyword_index, title_index, url, max_pages):
         title = page["title"]
         body = page["keywords"]
         
-        title = stopwords_remover.remove_stopwords(title)
-        body = stopwords_remover.remove_stopwords(body)
+        title = remove_stopwords(title)
+        body = remove_stopwords(body)
 
-        title = stemmer.stemming(title)
-        body = stemmer.stemming(body)
+        title = stem(title)
+        body = stem(body)
 
         title = list(set(title))
         body = list(set(body))
