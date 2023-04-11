@@ -6,9 +6,6 @@ from datetime import datetime
 
 
 
-# TODO: Define the database to store the indexed pages
-
-
 class Page:
     def __init__(self, id, title, last_modified, size, keywords, children, parents):
         self.id = id
@@ -86,17 +83,17 @@ def extract(url):
     return result
 
 
-def store(inverted_index, url, page):
+def store(crawled_result, url, page):
     
-    if url in inverted_index and "last_modified" in inverted_index[url] and inverted_index[url]["last_modified"] != "":
-        time1 = datetime.strptime(inverted_index[url]["last_modified"], "%a, %d %b %Y %H:%M:%S %Z")
+    if url in crawled_result and "last_modified" in crawled_result[url] and crawled_result[url]["last_modified"] != "":
+        time1 = datetime.strptime(crawled_result[url]["last_modified"], "%a, %d %b %Y %H:%M:%S %Z")
         time2 = datetime.strptime(page.last_modified, "%a, %d %b %Y %H:%M:%S %Z")
         if time1 < time2: # if time1 is later
-            return inverted_index
+            return crawled_result
     
-    database.insert_page(inverted_index, page, url)
+    database.insert_page(crawled_result, page, url)
 
-    inverted_index[url] = {
+    crawled_result[url] = {
             "page_id": page.id,
             "title": page.title,
             "last_modified": page.last_modified,
@@ -106,7 +103,7 @@ def store(inverted_index, url, page):
             "parents": page.parents
         }
     
-    return inverted_index
+    return crawled_result
 
 def crawl(url, max_pages):
 
@@ -116,7 +113,7 @@ def crawl(url, max_pages):
     crawled_list = []
     count = 0
 
-    inverted_index = {url: {}} #store parent->chidren
+    crawled_result = {url: {}} #store parent->chidren
 
     while crawl_list and count < max_pages:
         current_url = crawl_list.pop(0)
@@ -125,8 +122,8 @@ def crawl(url, max_pages):
         if(get_response(current_url)):
             current_page = extract(current_url)
             current_page.id = count
-            inverted_index[current_url] = {}
-            inverted_index[current_url]["children"] = current_page.children
+            crawled_result[current_url] = {}
+            crawled_result[current_url]["children"] = current_page.children
             if current_page.children:
                 for child in current_page.children:
                     if child not in crawled_list and child not in crawl_list: #avoid cyclic?
@@ -134,75 +131,64 @@ def crawl(url, max_pages):
 
             crawled_list.append(current_url)
             count += 1
-            inverted_index = store(inverted_index, current_url, current_page)
+            crawled_result = store(crawled_result, current_url, current_page)
 
-    for url in inverted_index:  
-        if "children" in inverted_index[url]:
-            for child in inverted_index[url]["children"]:
-                if child in inverted_index.keys():
-                    inverted_index[child]["parents"].append(url)
+    for url in crawled_result:  
+        if "children" in crawled_result[url]:
+            for child in crawled_result[url]["children"]:
+                if child in crawled_result.keys():
+                    crawled_result[child]["parents"].append(url)
         
     
-    return inverted_index
+    return crawled_result
 
 
-def print_pages(inverted_index):
-    for url in inverted_index:
+def print_pages(crawled_result):
+    for url in crawled_result:
         print("URL: " + url)
-        print("Title: " + inverted_index[url]["title"])
-        print("Last modified: " + inverted_index[url]["last_modified"])
-        print("Page size: " + str(inverted_index[url]["page_size"]))
-        keys = list(inverted_index[url]["keywords"].keys())
+        print("Title: " + crawled_result[url]["title"])
+        print("Last modified: " + crawled_result[url]["last_modified"])
+        print("Page size: " + str(crawled_result[url]["page_size"]))
+        keys = list(crawled_result[url]["keywords"].keys())
         sliced_keys = keys[:10]
-        sliced_keywords = {key: inverted_index[url]["keywords"][key] for key in sliced_keys}
+        sliced_keywords = {key: crawled_result[url]["keywords"][key] for key in sliced_keys}
         for key, value in sliced_keywords.items():
             print("\"" + key + "\"" + "(Word ID: " + str(value["word_id"]) + "): " + str(value["frequency"]) + "; ")
-        for child in inverted_index[url]["children"]:
-            if child in inverted_index:
-                print("Child: " + str(inverted_index[child]['page_id']))
+        for child in crawled_result[url]["children"]:
+            if child in crawled_result:
+                print("Child: " + str(crawled_result[child]['page_id']))
         print("")
 
-def create_txt(inverted_index, file_name):
+def create_txt(crawled_result, file_name):
     with open(file_name, 'w') as file:
-        for url in inverted_index:
-            file.write("Page ID: " + str(inverted_index[url]["page_id"]) + "\n")
-            file.write("Page title: " + inverted_index[url]["title"] + "\n")
+        for url in crawled_result:
+            file.write("Page ID: " + str(crawled_result[url]["page_id"]) + "\n")
+            file.write("Page title: " + crawled_result[url]["title"] + "\n")
             file.write("URL: " + url + "\n")
-            file.write("Last modified: " + inverted_index[url]["last_modified"] + "    Page size: " + str(inverted_index[url]["page_size"]) + "\n")
-            keys = list(inverted_index[url]["keywords"].keys())
+            file.write("Last modified: " + crawled_result[url]["last_modified"] + "    Page size: " + str(crawled_result[url]["page_size"]) + "\n")
+            keys = list(crawled_result[url]["keywords"].keys())
             sliced_keys = keys[:10]
-            sliced_keywords = {key: inverted_index[url]["keywords"][key] for key in sliced_keys}
+            sliced_keywords = {key: crawled_result[url]["keywords"][key] for key in sliced_keys}
             file.write("Keywords: ")
             for key, value in sliced_keywords.items():
                 file.write("\"" + key + "\"" + "(Word ID: " + str(value["word_id"]) + "): " + str(value["frequency"]) + "; ")
             file.write("\n")
             count = 1
-            for child in inverted_index[url]["children"]:
-                if child in inverted_index.keys() and "page_id" in inverted_index[child].keys():
-                    file.write("Child Link " + str(count) + ": " + child + " (page ID: " + str(inverted_index[child]["page_id"]) + ")")
+            for child in crawled_result[url]["children"]:
+                if child in crawled_result.keys() and "page_id" in crawled_result[child].keys():
+                    file.write("Child Link " + str(count) + ": " + child + " (page ID: " + str(crawled_result[child]["page_id"]) + ")")
                 else:
                     file.write("Child Link " + str(count) + ": " + child)
                 count += 1
                 file.write("\n")
             file.write("\n")
             count = 1
-            for parent in inverted_index[url]["parents"]:
-                if parent in inverted_index.keys() and "page_id" in inverted_index[parent].keys():
-                    file.write("Parent Link " + str(count) + ": " + parent + " (page ID: " + str(inverted_index[parent]["page_id"]) + ")\n")
+            for parent in crawled_result[url]["parents"]:
+                if parent in crawled_result.keys() and "page_id" in crawled_result[parent].keys():
+                    file.write("Parent Link " + str(count) + ": " + parent + " (page ID: " + str(crawled_result[parent]["page_id"]) + ")\n")
                     count += 1
             file.write("\n")
             file.write("-------------------------------------------\n")
 
 
-def main():
-    url = "https://shaw-auditorium.hkust.edu.hk/"
-    MAX_PAGES = 50
-    inverted_index = crawl(url, MAX_PAGES)
-    create_txt(inverted_index, 'spider result.txt')
-    database.export_tables()
-    
-    #print_pages(inverted_index)
-    
 
-if __name__ == "__main__":
-    main()
