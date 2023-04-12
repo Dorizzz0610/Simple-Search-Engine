@@ -1,11 +1,15 @@
 import indexer
 import crawler
+from collections import defaultdict
 
 def main():
     url = "https://shaw-auditorium.hkust.edu.hk/"
     MAX_PAGES = 50
-    keyword_index, title_index = indexer.indexing({}, {}, url, MAX_PAGES)
 
+    keyword_index = defaultdict(list)
+    title_index = defaultdict(list)
+
+    keyword_index, title_index = indexer.indexing({}, {}, url, MAX_PAGES)
 
     
     inverted_index = crawler.crawl(url, MAX_PAGES)

@@ -13,11 +13,11 @@ from nltk.stem.porter import PorterStemmer
 
 
 
-def remove_stopwords(text):
+def remove_stopwords(words):
     STOPWORDS = set(line.strip() for line in open('stopwords.txt'))
 
     filtered_words = []
-    for word in text:
+    for word in words:
         if word not in STOPWORDS:
             filtered_words.append(word)
 
@@ -25,13 +25,13 @@ def remove_stopwords(text):
 
 
 
-def stem(text):
+def stem(words):
     stopwords = set(line.strip() for line in open('stopwords.txt')) 
 
     stemmer = PorterStemmer() 
 
     stemmed_words = [] 
-    for word in text: 
+    for word in words: 
         stemmed_word = stemmer.stem(word) 
         if stemmed_word not in stopwords: 
             stemmed_words.append(stemmed_word) 
@@ -40,9 +40,10 @@ def stem(text):
 
 
 def preprocess(text):
+    text = [word.lower() for word in text]
     text = remove_stopwords(text)
     text = stem(text)
-    text = list(set(text))
+    text = list(set(text)) # remove duplicates
     return text
 
 
@@ -53,18 +54,39 @@ def get_phrases(text):
     return phrases
 
 
+
+
 def indexing(keyword_index, title_index, url, max_pages):
     # indexing the keywords and body of a set of crawled pages
 
     crawled_result = crawler.crawl(url, max_pages)
     
     
-    for url, page in crawled_result.items():
-        title = preprocess(page["title"]) # a string
-        body = preprocess(page["keywords"]) # a dictionary
-        
+    for page in crawled_result.values():
+        title = page["title"].split() # a list of strings
+        body = list(page["keywords"].keys()) # a list of strings
 
-        title_index[url] = title
-        keyword_index[url] = body
+        # stem and remove stopwords
+        title = preprocess(title)
+        body = preprocess(body)
+        
+        # handle searchs containing phrases
+        title_phrases = get_phrases(title)
+        body_phrases = get_phrases(body)
+
+        # insert into title_index
+        for title_word in title:
+            if title_word not in title_index.keys():
+                title_index[title_word].append((page.id, title.count(title_word)))
+        for title_phrase in title_phrases:
+            if title_phrase not in title_index.keys():
+                title_index[title_phrase].append((page.id, title_phrases.count(title_phrase)))
+
+        # insert into keyword_index
+        for body_word in body:
+            keyword_index[body_word].append((page.id, body.count(body_word)))
+        for body_phrase in body_phrases:
+            keyword_index[body_phrase].append((page.id, body_phrases.count(body_phrase)))
+        
 
     return keyword_index, title_index
