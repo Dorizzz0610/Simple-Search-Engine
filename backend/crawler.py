@@ -1,6 +1,5 @@
 import database
 import requests
-from urllib import request, error, parse
 from bs4 import BeautifulSoup
 from datetime import datetime
 
