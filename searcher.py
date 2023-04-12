@@ -4,7 +4,7 @@ import crawler
 def main():
     url = "https://shaw-auditorium.hkust.edu.hk/"
     MAX_PAGES = 50
-    indexer.indexing(url, MAX_PAGES)
+    keyword_index, title_index = indexer.indexing({}, {}, url, MAX_PAGES)
 
 
     

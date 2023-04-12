@@ -1,6 +1,5 @@
 import crawler
 from nltk.stem.porter import PorterStemmer 
-from nltk.tokenize import word_tokenize
 
 # An indexer which extracts keywords from a page and inserts them into an inverted file
 
@@ -17,28 +16,41 @@ from nltk.tokenize import word_tokenize
 def remove_stopwords(text):
     STOPWORDS = set(line.strip() for line in open('stopwords.txt'))
 
-
     filtered_words = []
-    for word in text.split():
+    for word in text:
         if word not in STOPWORDS:
             filtered_words.append(word)
 
+    return filtered_words
 
 
 
-
-
-def stem(tokenized_text):
+def stem(text):
     stopwords = set(line.strip() for line in open('stopwords.txt')) 
 
     stemmer = PorterStemmer() 
 
     stemmed_words = [] 
-    for word in tokenized_text: 
+    for word in text: 
         stemmed_word = stemmer.stem(word) 
         if stemmed_word not in stopwords: 
             stemmed_words.append(stemmed_word) 
 
+    return stemmed_words
+
+
+def preprocess(text):
+    text = remove_stopwords(text)
+    text = stem(text)
+    text = list(set(text))
+    return text
+
+
+def get_phrases(text):
+    phrases = []
+    for i in range(len(text)-1):
+        phrases.append(text[i] + " " + text[i+1])
+    return phrases
 
 
 def indexing(keyword_index, title_index, url, max_pages):
@@ -48,17 +60,9 @@ def indexing(keyword_index, title_index, url, max_pages):
     
     
     for url, page in crawled_result.items():
-        title = page["title"]
-        body = page["keywords"]
+        title = preprocess(page["title"]) # a string
+        body = preprocess(page["keywords"]) # a dictionary
         
-        title = remove_stopwords(title)
-        body = remove_stopwords(body)
-
-        title = stem(title)
-        body = stem(body)
-
-        title = list(set(title))
-        body = list(set(body))
 
         title_index[url] = title
         keyword_index[url] = body
