@@ -16,7 +16,7 @@ def main():
 
     keyword_index, title_index = indexer.indexing(keyword_index, title_index, starting_url, MAX_PAGES)
 
-    top_doc = searcher.retrieval_function(query, keyword_index, title_index)
+    top_doc = searcher.retrieval_function(query, keyword_index, title_index, MAX_PAGES)
     
     inverted_index = crawler.crawl(starting_url, MAX_PAGES)
     crawler.create_txt(inverted_index, 'spider result.txt')
