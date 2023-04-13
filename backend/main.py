@@ -4,25 +4,35 @@ import crawler
 import searcher
 
 def main():
-    starting_url = "https://shaw-auditorium.hkust.edu.hk/"
-    MAX_PAGES = 50
+    starting_url = "https://cse.hkust.edu.hk"
+    MAX_PAGES = 10
 
     query = input("Enter your query: ")
     query = query.split()
 
+    # Step 1: Crawl the pages
+    print("Crawling the pages...")
+    crawled_result = crawler.crawl(starting_url, MAX_PAGES)
 
+    # Step 2: Index the crawled pages
+    print("Indexing the pages...")
     keyword_index = defaultdict(list)
     title_index = defaultdict(list)
 
-    keyword_index, title_index = indexer.indexing(keyword_index, title_index, starting_url, MAX_PAGES)
+    keyword_index, title_index = indexer.indexing(keyword_index, title_index, crawled_result)
 
+    # Step 3: Search the query
+    print("Searching the query...")
     top_doc = searcher.retrieval_function(query, keyword_index, title_index, MAX_PAGES)
+
+    print("The best fit page is: " + str(top_doc))
     
-    inverted_index = crawler.crawl(starting_url, MAX_PAGES)
-    crawler.create_txt(inverted_index, 'spider result.txt')
-    crawler.database.export_tables()
+
+
+    # inverted_index = crawler.crawl(starting_url, MAX_PAGES)
+    # crawler.create_txt(inverted_index, 'spider result.txt')
+    # crawler.database.export_tables()
     
-    #print_pages(inverted_index)
     
 
 if __name__ == "__main__":

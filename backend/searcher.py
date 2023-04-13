@@ -1,5 +1,3 @@
-import indexer
-import crawler
 from collections import defaultdict
 import math
 from scipy.spatial.distance import cosine
@@ -30,6 +28,7 @@ def calculate_tfxidf(inverted_index, size):
     return tf_idf_weights
 
 
+
 def calculate_similarity(query, keyword_weights, title_weights, FAVOR):
     similarity = {}
     for doc_id in keyword_weights.values():
@@ -53,6 +52,9 @@ def calculate_similarity(query, keyword_weights, title_weights, FAVOR):
 
         # calculate the cosine similarity
         similarity[doc_id] = cosine(query_vector, doc_vector)
+    return similarity
+
+
 
 def retrieval_function(query, keyword_index, title_index, max_pages):
     # A retrieval function (or called the **search engine**) that compares a list of query terms against the inverted file and returns the top documents, 
@@ -68,10 +70,14 @@ def retrieval_function(query, keyword_index, title_index, max_pages):
     keyword_weights = calculate_tfxidf(keyword_index, max_pages)
     title_weights = calculate_tfxidf(title_index, max_pages)
 
+    similarity = calculate_similarity(query, keyword_weights, title_weights, FAVOR)
 
 
     top_doc = 0 # page_id of the top document
 
+    for doc_id in similarity.keys(): 
+        if similarity[doc_id] > similarity[top_doc]: 
+            top_doc = doc_id 
 
 
     return top_doc

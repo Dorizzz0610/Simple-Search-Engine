@@ -14,7 +14,10 @@ from nltk.stem.porter import PorterStemmer
 
 
 def remove_stopwords(words):
-    STOPWORDS = set(line.strip() for line in open('stopwords.txt'))
+    STOPWORDS = set()
+    with open('.\stopwords.txt', 'r') as file:
+        for line in file:
+            STOPWORDS.add(line.strip())
 
     filtered_words = []
     for word in words:
@@ -56,11 +59,8 @@ def get_phrases(text):
 
 
 
-def indexing(keyword_index, title_index, url, max_pages):
-    # indexing the keywords and body of a set of crawled pages
-
-    crawled_result = crawler.crawl(url, max_pages)
-    
+def indexing(keyword_index, title_index, crawled_result):
+    # indexing the keywords and body of a set of crawled pages    
     
     for page in crawled_result.values():
         title = page["title"].split() # a list of strings
@@ -77,16 +77,16 @@ def indexing(keyword_index, title_index, url, max_pages):
         # insert into title_index
         for title_word in title:
             if title_word not in title_index.keys():
-                title_index[title_word].append((page.id, title.count(title_word)))
+                title_index[title_word].append((page["page_id"], title.count(title_word)))
         for title_phrase in title_phrases:
             if title_phrase not in title_index.keys():
-                title_index[title_phrase].append((page.id, title_phrases.count(title_phrase)))
+                title_index[title_phrase].append((page["page_id"], title_phrases.count(title_phrase)))
 
         # insert into keyword_index
         for body_word in body:
-            keyword_index[body_word].append((page.id, body.count(body_word)))
+            keyword_index[body_word].append((page["page_id"], body.count(body_word)))
         for body_phrase in body_phrases:
-            keyword_index[body_phrase].append((page.id, body_phrases.count(body_phrase)))
+            keyword_index[body_phrase].append((page["page_id"], body_phrases.count(body_phrase)))
         
 
     return keyword_index, title_index
