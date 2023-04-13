@@ -17,11 +17,11 @@ def calculate_tfxidf(inverted_index, size):
     idf = {term: math.log2(size/df[term]) for term in df}
 
 
-    # tf_idf_weights: a dictionary. key: term, value: dictionary,  {doc_id: (tf-idf weight, term frequency)}
+    # tf_idf_weights: a dictionary. key: term, value: dictionary,  {doc_id: tf-idf weight}
     tf_idf_weights = {}
     for term, doc_freq in inverted_index.items():
         for doc_id, tf in doc_freq:
-            tf_idf_weights.setdefault(term, {})[doc_id] = ((1 + math.log2(tf)) * idf[term], tf)
+            tf_idf_weights.setdefault(term, {})[doc_id] = (1 + math.log2(tf)) * idf[term]
 
     return tf_idf_weights
 
@@ -35,13 +35,6 @@ def calculate_similarity(query, keyword_weights, title_weights, FAVOR):
         for doc_id in doc.keys():
             similarity[doc_id] = 0 # dict isn't hashable
 
-
-    # query_vector = []
-    # for word in query:
-    #     if word in keyword_weights.keys():
-    #         query_vector.append(keyword_weights[word])
-    #     if word in title_weights.keys():
-    #         query_vector.append(FAVOR * title_weights[word])
     
     query_vector = []
     for word in query:
@@ -49,25 +42,17 @@ def calculate_similarity(query, keyword_weights, title_weights, FAVOR):
         title_weight = 0
         if word in keyword_weights.keys():
             keyword_weight = keyword_weights[word]
-        if word in title_weights.keys():
-            title_weight = FAVOR * title_weights[word]
-        combined_weight = {doc_id: (keyword_weight.get(doc_id, 0)[0] + title_weight.get(doc_id, 0)[0]) for doc_id in similarity.keys()}
+        # if word in title_weights.keys():
+        #     title_weight = FAVOR * title_weights[word]
+        for word, weights in title_weights.items():
+            for doc_id, weight in weights.items():
+                keyword_weight
+                
+        combined_weight = {doc_id: (keyword_weight.get(doc_id, 0)[0] + title_weight.get(doc_id, 0)[0]) for doc_id in similarity.keys()} # get(doc_id, 0) means that the default value of doc_id is 0
         query_vector.append(combined_weight)
 
 
-
     # iterate each document and generate a document vector
-    # for doc_id in similarity.keys():
-    #     doc_vector = []
-    #     for word in query:
-    #         if word in keyword_weights.keys():
-    #             doc_vector.append(keyword_weights[word][doc_id])
-    #         if word in title_weights.keys():
-    #             doc_vector.append(FAVOR * title_weights[word][doc_id])
-            
-    #     # calculate the cosine similarity
-    #     similarity[doc_id] = cosine(query_vector, doc_vector)
-
     for doc_id in similarity.keys():
         doc_vector = []
         for word in query:
