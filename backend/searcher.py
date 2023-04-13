@@ -7,7 +7,7 @@ from scipy.spatial.distance import cosine
 
 def calculate_tfxidf(inverted_index, size):
     # inverted_index: a dictionary. key: term, value: list of tuples (page id, term frequency)
-
+    
     # df: a dictionary. key: term, value: df, number of documents that contain the term
     df = defaultdict(int)
     for term, doc_freq in inverted_index.items():
@@ -16,23 +16,24 @@ def calculate_tfxidf(inverted_index, size):
     # idf: a dictionary. key: term, value: idf value of the term
     idf = {term: math.log2(size/df[term]) for term in df}
 
-    tf_idf_weights = defaultdict(lambda: defaultdict(float)) 
-    # outer dictionary should be initialized with an inner dictionary for each new key
-    # inner dictionary should be initialized with a default value of float(0) for each new key
-    
+
+    # tf_idf_weights: a dictionary. key: term, value: dictionary,  {doc_id: (tf-idf weight, term frequency)}
+    tf_idf_weights = {}
     for term, doc_freq in inverted_index.items():
-        doc_id = doc_freq[0]
-        tf = doc_freq[1]
-        tf_idf_weights[term][doc_id] = (1 + math.log2(tf)) * idf[term]
+        for doc_id, tf in doc_freq:
+            tf_idf_weights.setdefault(term, {})[doc_id] = ((1 + math.log2(tf)) * idf[term], tf)
 
     return tf_idf_weights
 
 
 
 def calculate_similarity(query, keyword_weights, title_weights, FAVOR):
-    similarity = {}
+    # weights: a dictionary. key: term, value: dictionary,  {doc_id: (tf-idf weight, term frequency)}
+
+    similarity = {} # default dict is not hashable! so we use another way to initialize here
     for doc_id in keyword_weights.values():
         similarity[doc_id] = 0
+
 
     query_vector = []
     for word in query:
@@ -52,7 +53,9 @@ def calculate_similarity(query, keyword_weights, title_weights, FAVOR):
 
         # calculate the cosine similarity
         similarity[doc_id] = cosine(query_vector, doc_vector)
+    # simialrity: a dictionary. key: doc_id, value: cosine similarity
     return similarity
+
 
 
 
