@@ -1,4 +1,3 @@
-import crawler
 from nltk.stem.porter import PorterStemmer 
 
 # An indexer which extracts keywords from a page and inserts them into an inverted file
@@ -11,19 +10,18 @@ from nltk.stem.porter import PorterStemmer
 # - The indexes must be able to support phrase search such as “hong kong” in page titles and page bodies.
 
 
-
-
 def remove_stopwords(words):
     STOPWORDS = set()
     with open('.\stopwords.txt', 'r') as file:
         for line in file:
-            STOPWORDS.add(line.strip())
+            word = line.strip()
+            if word:
+                STOPWORDS.add(word)
 
     filtered_words = []
     for word in words:
         if word not in STOPWORDS:
             filtered_words.append(word)
-
     return filtered_words
 
 
@@ -38,7 +36,6 @@ def stem(words):
         stemmed_word = stemmer.stem(word) 
         if stemmed_word not in stopwords: 
             stemmed_words.append(stemmed_word) 
-
     return stemmed_words
 
 

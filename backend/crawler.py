@@ -2,7 +2,7 @@ import database
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
-
+import string
 
 
 class Page:
@@ -59,9 +59,11 @@ def extract(url):
 
     # Keywords and frequencies
     keywords = {}
+    exclude = set(string.punctuation).union("|") # Set of punctuation marks
     word_id = 0
     for word in page.get_text().split():
         word = word.strip().lower()
+        word = ''.join(ch for ch in word if ch not in exclude)
         if word in keywords:
             keywords[word]["frequency"] += 1
         else:

@@ -4,5 +4,4 @@ datetime
 requests
 subprocess
 math
-scipy
 sklearn

@@ -5,7 +5,8 @@ import searcher
 
 def main():
     starting_url = "https://cse.hkust.edu.hk"
-    MAX_PAGES = 10
+    MAX_PAGES = 20
+    
 
     query = input("Enter your query: ")
     query = query.split()
@@ -13,6 +14,9 @@ def main():
     # Step 1: Crawl the pages
     print("Crawling the pages...")
     crawled_result = crawler.crawl(starting_url, MAX_PAGES)
+    for url, page in crawled_result.items():
+        keywords = page["keywords"]
+        print("URL: " + url + " Keywords: " + str(keywords))
 
     # Step 2: Index the crawled pages
     print("Indexing the pages...")
@@ -23,7 +27,7 @@ def main():
 
     # Step 3: Search the query
     print("Searching the query...")
-    top_doc = searcher.retrieval_function(query, keyword_index, title_index, MAX_PAGES)
+    top_doc = searcher.retrieval_function(query, keyword_index, title_index, MAX_PAGES, 1.5)
 
     print("The best fit page is: " + str(top_doc))
     
