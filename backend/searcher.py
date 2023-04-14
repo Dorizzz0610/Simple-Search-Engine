@@ -20,7 +20,12 @@ def calculate_tfxidf(inverted_index, size):
             if(doc_tuple[1] > 0): df[term] += 1
 
     # idf: a dictionary. key: term, value: idf value of the term
-    idf = {term: math.log2(size/df[term]) for term in df}
+    idf = {}
+    for term in df.keys():
+        try:
+            idf[term] = math.log2(size/df[term])
+        except ZeroDivisionError:
+            idf[term] = 0
 
     # max_tf: a dictionary. key: term, value: max_tf value of the term
     max_tf = {}
@@ -36,7 +41,12 @@ def calculate_tfxidf(inverted_index, size):
         for doc_tuple in doc_tuple_list:
             doc_id = doc_tuple[0]
             tf = doc_tuple[1]
-            tf_idf_weights[term] = {doc_id: (1 + math.log2(tf)) * idf[term]/max_tf[term]}
+            try:
+                tf_idf_weights[term] = {doc_id: (1 + math.log2(tf)) * idf[term]/max_tf[term]}
+            except ZeroDivisionError:
+                tf_idf_weights[term] = {doc_id: 0}
+            except ValueError:
+                tf_idf_weights[term] = {doc_id: 0}
 
     return tf_idf_weights
 
@@ -44,11 +54,13 @@ def calculate_tfxidf(inverted_index, size):
 
 
 def calculate_similarity(query, keyword_weights, title_weights, FAVOR, doc_num):
+    # query: a list
     # tf_idf_weights: a dictionary. key: term, value: dictionary,  {doc_id: tf-idf_weight}
+    query = indexer.stem(query)
+    print("stemmed query: ", query)
 
     all_terms = set(keyword_weights.keys()).union(set(title_weights.keys())).union(set(query))
-    
-    query = indexer.stem(query)
+
     query_vector = {term: 0 for term in all_terms}
     for term in query:
         query_vector[term] = 1
@@ -92,8 +104,12 @@ def retrieval_function(query, keyword_index, title_index, max_pages, FAVOR=1.5):
 
     # docs_similarity: a list - index: doc_id, value: cosine similarity
     docs_similarity = calculate_similarity(query, keyword_weights, title_weights, FAVOR, max_pages)
+    top_doc = docs_similarity.index(max(docs_similarity))
+
     for doc_id in range(len(docs_similarity)):
         print("doc_id: ", doc_id, "score: ", docs_similarity[doc_id])
-    top_doc = docs_similarity.index(max(docs_similarity))
+    with open("score.txt", 'w') as file:
+        for doc_id in range(len(docs_similarity)):
+            file.write("doc_id: " + str(doc_id) + " score: " + str(docs_similarity[doc_id]) + "\n")
     
     return top_doc

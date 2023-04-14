@@ -2,8 +2,9 @@
 
 ## 1. Introduction
 
-A search engine for a specific website, with query in the form of a list of keywords. (logical operators aren't supported yet)
+A simple search engine for a specific website.
+Query format: a list of keywords that allows phrases to be specified in double quotes (logical operators aren't supported yet)
 
-Back-end: Python
-Database: MySQL
-Front-end: React.js
+- Back-end: Python
+- Database: MySQL
+- Front-end: React.js

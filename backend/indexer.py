@@ -77,15 +77,18 @@ def indexing(keyword_index, title_index, crawled_result):
                 title_index[title_word].append((page["page_id"], title.count(title_word)))
         for title_phrase in title_phrases:
             if title_phrase not in title_index.keys():
-                title_index[title_phrase].append((page["page_id"], title_phrases.count(title_phrase)))
+                title_index[title_phrase].append((page["page_id"], title.count(title_phrase)))
 
         # insert into keyword_index
         for body_word in body:
             keyword_index[body_word].append((page["page_id"], body.count(body_word)))
         for body_phrase in body_phrases:
-            keyword_index[body_phrase].append((page["page_id"], body_phrases.count(body_phrase)))
-        
+            keyword_index[body_phrase].append((page["page_id"], body.count(body_phrase)))
 
+    with open('keyword.txt', 'w') as file:
+        for(word, page_list) in keyword_index.items():
+            for page in page_list:
+                    file.write("word: " + word + " page: " + str(page[0]) + " count: " + str(page[1]) + "\n")
     return keyword_index, title_index
 
 
