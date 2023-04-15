@@ -52,8 +52,15 @@ def calculate_tfxidf(inverted_index, size):
 
 
 
+def check_phrase_positions(phrase_positions, doc_positions):
+    for term_positions in zip(*doc_positions):
+        if all(term_positions[i] - term_positions[i - 1] == 1 for i in range(1, len(term_positions))):
+            return True
+    return False
 
-def calculate_similarity(query, keyword_weights, title_weights, FAVOR, doc_num):
+
+
+def calculate_similarity(query, query_phrase_position, keyword_weights, title_weights, FAVOR, doc_num):
     # query: a list
     # tf_idf_weights: a dictionary. key: term, value: dictionary,  {doc_id: tf-idf_weight}
     query = indexer.stem(query)
@@ -103,7 +110,7 @@ def retrieval_function(query, query_phrase_position, keyword_index, title_index,
     title_weights = calculate_tfxidf(title_index, max_pages)
 
     # docs_similarity: a list - index: doc_id, value: cosine similarity
-    docs_similarity = calculate_similarity(query, keyword_weights, title_weights, FAVOR, max_pages)
+    docs_similarity = calculate_similarity(query, query_phrase_position, keyword_weights, title_weights, FAVOR, max_pages)
     top_doc = docs_similarity.index(max(docs_similarity))
 
     for doc_id in range(len(docs_similarity)):

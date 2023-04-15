@@ -36,7 +36,7 @@ def handle_query(query):
 
 def main():
     starting_url = "https://cse.hkust.edu.hk"
-    MAX_PAGES = 25
+    MAX_PAGES = 10
     
     # Step 0: Get the query
     query = input("Enter your query: ")

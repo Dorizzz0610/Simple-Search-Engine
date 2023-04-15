@@ -1,4 +1,5 @@
 import database
+import indexer
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
@@ -33,6 +34,32 @@ def get_head(url):
         return None
     
 
+def extract_keywords(words):
+    keywords = {}
+    exclude = set(string.punctuation).union("|") # Set of punctuation marks
+    word_id = 0
+
+    for word in words:
+        word = word.strip().lower()
+        word = ''.join(ch for ch in word if ch not in exclude)
+    
+    phrases = indexer.get_phrases(words)
+    words = words + phrases
+
+    for position, word in enumerate(words):
+        if word in keywords:
+            keywords[word]["frequency"] += 1
+            keywords[word]["positions"].append(position)
+        else:
+            keywords[word] = {}
+            keywords[word]["frequency"] = 1
+            keywords[word]["word_id"] = word_id
+            keywords[word]["positions"] = [position]
+            word_id += 1
+
+    return keywords
+
+
 # Extract the HTML content of the URL
 def extract(url):
     response = get_response(url)
@@ -57,21 +84,7 @@ def extract(url):
     size = len(response)
 
     # Keywords and frequencies
-    keywords = {}
-    exclude = set(string.punctuation).union("|") # Set of punctuation marks
-    word_id = 0
-    for position, word in enumerate(page.get_text().split()):
-        word = word.strip().lower()
-        word = ''.join(ch for ch in word if ch not in exclude)
-        if word in keywords:
-            keywords[word]["frequency"] += 1
-            keywords[word]["positions"].append(position)
-        else:
-            keywords[word] = {}
-            keywords[word]["frequency"] = 1
-            keywords[word]["word_id"] = word_id
-            keywords[word]["positions"] = [position]
-            word_id += 1
+    keywords = extract_keywords(page.get_text().split())
 
     # Children links in the page
     children = []
@@ -93,7 +106,7 @@ def store(crawled_result, url, page):
         if time1 < time2: # if time1 is later
             return crawled_result
     
-    database.insert_page(crawled_result, page, url)
+    # database.insert_page(crawled_result, page, url)
 
     crawled_result[url] = {
             "page_id": page.id,
@@ -109,7 +122,7 @@ def store(crawled_result, url, page):
 
 def crawl(url, max_pages):
 
-    database.create_tables()
+    # database.create_tables()
 
     crawl_list = [url]
     crawled_list = []
