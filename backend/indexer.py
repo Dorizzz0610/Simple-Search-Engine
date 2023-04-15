@@ -59,6 +59,9 @@ def get_phrases(text):
 def indexing(keyword_index, title_index, crawled_result):
     # indexing the keywords and body of a set of crawled pages    
     
+            # keywords[word]["frequency"] = 1
+            # keywords[word]["word_id"] = word_id
+            # keywords[word]["positions"] = [position]
     for page in crawled_result.values():
         title = page["title"].split() # a list of strings
         body = list(page["keywords"].keys()) # a list of strings
@@ -72,18 +75,28 @@ def indexing(keyword_index, title_index, crawled_result):
         body_phrases = get_phrases(body)
 
         # insert into title_index
-        for title_word in title:
+            # the position of keywords in the title hasn't been recorded, so we need extra steps here
+        for position, title_word in enumerate(title):
             if title_word not in title_index.keys():
-                title_index[title_word].append((page["page_id"], title.count(title_word)))
+                title_index[title_word].append((page["page_id"], title.count(title_word), [position]))
+            else:
+                for page in title_index[title_word]:
+                    if page[0] == page["page_id"]:
+                        page[2].append(position)
+
         for title_phrase in title_phrases:
             if title_phrase not in title_index.keys():
-                title_index[title_phrase].append((page["page_id"], title.count(title_phrase)))
+                title_index[title_phrase].append((page["page_id"], title.count(title_phrase), [position]))
+            else:
+                for page in title_index[title_phrase]:
+                    if page[0] == page["page_id"]:
+                        page[2].append(position)
 
         # insert into keyword_index
         for body_word in body:
-            keyword_index[body_word].append((page["page_id"], body.count(body_word)))
+            keyword_index[body_word].append((page["page_id"], body.count(body_word), page["keywords"][body_word]["positions"]))
         for body_phrase in body_phrases:
-            keyword_index[body_phrase].append((page["page_id"], body.count(body_phrase)))
+            keyword_index[body_phrase].append((page["page_id"], body.count(body_phrase)), page["keywords"][body_word]["positions"])
 
     with open('keyword.txt', 'w') as file:
         for(word, page_list) in keyword_index.items():

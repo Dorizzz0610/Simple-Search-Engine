@@ -18,13 +18,20 @@ def create_tables():
     connection.commit()
 
     create_keywords_table = """CREATE TABLE IF NOT EXISTS keywords (
-                                page_id INT,
-                                word VARCHAR(255) NOT NULL,
-                                word_id INT NOT NULL,
-                                frequency INT NOT NULL,
-                                PRIMARY KEY (page_id, word),
-                                FOREIGN KEY (page_id) REFERENCES inverted_index(page_id)
-                            )"""
+                                    page_id INT,
+                                    word VARCHAR(255) NOT NULL,
+                                    word_id INT NOT NULL,
+                                    frequency INT NOT NULL,
+                                    PRIMARY KEY (page_id, word),
+                                    FOREIGN KEY (page_id) REFERENCES inverted_index(page_id)
+                                );
+
+                                CREATE TABLE IF NOT EXISTS positions (
+                                    page_id INT,
+                                    word VARCHAR(255) NOT NULL,
+                                    position INT NOT NULL,
+                                    FOREIGN KEY (page_id, word) REFERENCES keywords(page_id, word)
+                                )"""
 
     # SQL statement to create the relationship table
     create_relationship_table = """CREATE TABLE IF NOT EXISTS relationship (
@@ -51,13 +58,6 @@ def create_tables():
     cursor.execute(create_relationship_table)
     
     connection.commit()
-
-    # alter_table_keywords = "ALTER TABLE keywords ADD FOREIGN KEY (page_id) REFERENCES inverted_index(page_id)"
-    # cursor.execute(alter_table_keywords)
-    # alter_table_relationship = "ALTER TABLE relationship ADD FOREIGN KEY (page_id) REFERENCES inverted_index(page_id)"
-    # cursor.execute(alter_table_relationship)
-    # connection.commit()
-
     connection.close()
 
 

@@ -61,15 +61,17 @@ def extract(url):
     keywords = {}
     exclude = set(string.punctuation).union("|") # Set of punctuation marks
     word_id = 0
-    for word in page.get_text().split():
+    for position, word in enumerate(page.get_text().split()):
         word = word.strip().lower()
         word = ''.join(ch for ch in word if ch not in exclude)
         if word in keywords:
             keywords[word]["frequency"] += 1
+            keywords[word]["positions"].append(position)
         else:
             keywords[word] = {}
             keywords[word]["frequency"] = 1
             keywords[word]["word_id"] = word_id
+            keywords[word]["positions"] = [position]
             word_id += 1
 
     # Children links in the page

@@ -1,0 +1,157 @@
+To modify the code to make the word position also be recorded, you can add a list to store the positions of each word in the `keywords` dictionary. Here are the modifications you can make:
+
+1. Modify the `keywords` dictionary: Add a new key `positions` to each word, which is an empty list to store the positions of the word.
+
+```
+if word in keywords:
+    keywords[word]["frequency"] += 1
+else:
+    keywords[word] = {}
+    keywords[word]["frequency"] = 1
+    keywords[word]["word_id"] = word_id
+    keywords[word]["positions"] = []  # Add this line
+    word_id += 1
+```
+
+2. Record the position of each word: Modify the code inside the `for` loop to add the position of each word to the `positions` list.
+
+```
+for i, word in enumerate(page.get_text().split()):
+    word = word.strip().lower()
+    word = ''.join(ch for ch in word if ch not in exclude)
+    if word in keywords:
+        keywords[word]["frequency"] += 1
+        keywords[word]["positions"].append(i)  # Add this line
+    else:
+        keywords[word] = {}
+        keywords[word]["frequency"] = 1
+        keywords[word]["word_id"] = word_id
+        keywords[word]["positions"] = [i]  # Add this line
+        word_id += 1
+```
+
+3. Store the positions in the database: Modify the `store` function to include the positions of each word in the database.
+
+```
+database.insert_page(crawled_result, page, url)
+
+crawled_result[url] = {
+        "page_id": page.id,
+        "title": page.title,
+        "last_modified": page.last_modified,
+        "page_size": page.size,
+        "keywords": page.keywords,
+        "children": page.children,
+        "parents": page.parents
+    }
+
+# Add this loop to store the positions of each word
+for word in crawled_result[url]["keywords"]:
+    positions = crawled_result[url]["keywords"][word]["positions"]
+    database.insert_positions(word, url, positions)
+```
+
+By making these modifications, you will be able to record the position of each word in the document and store it in the database. This will enable you to support phrase search and proximity search in the future.
+
+
+
+
+
+
+
+
+
+Great! Now that you have modified the crawler and indexer to support storing positions, you can update the retrieval function to include phrase search.
+
+Here's an updated version of the `retrieval_function` that supports phrase search:
+
+```
+def retrieval_function(query, keyword_index, title_index, max_pages, FAVOR=1.5):
+    # FAVOR: a constant to boost the rank of a page if there is a match in the title
+
+    # stem query terms
+    query = indexer.stem(query)
+
+    # split query into individual terms and phrases
+    terms = []
+    phrases = []
+    for i, term in enumerate(query):
+        if i == 0:
+            terms.append(term)
+            continue
+        if query[i-1] == '"':
+            # start of a phrase
+            phrases.append(term)
+        elif term == '"':
+            # end of a phrase
+            phrases[-1] = ' '.join(phrases[-1:])
+            phrases[-1] = phrases[-1][:-1]
+        else:
+            # individual term
+            terms.append(term)
+
+    # the weights are nested dictionary containing weights
+    # outer dictionary - key: term  value: inner dictionary
+    # inner dictionary - key: doc_id value: tfxidf weight
+    keyword_weights = calculate_tfxidf(keyword_index, max_pages)
+    title_weights = calculate_tfxidf(title_index, max_pages)
+
+    # collect positions of all terms in the query
+    term_positions = defaultdict(list)
+    for i, term in enumerate(terms):
+        for doc_id, positions in keyword_index[term]:
+            term_positions[doc_id].append(positions)
+
+    # find positions of all phrases in the query
+    phrase_positions = defaultdict(list)
+    for phrase in phrases:
+        phrase_terms = phrase.split()
+        phrase_docs = set(doc_id for doc_id, _ in keyword_index[phrase_terms[0]])
+        for term in phrase_terms[1:]:
+            term_docs = set(doc_id for doc_id, _ in keyword_index[term])
+            phrase_docs &= term_docs
+        for doc_id in phrase_docs:
+            for pos in keyword_index[phrase_terms[0]][doc_id]:
+                if all(pos+i in keyword_index[term][doc_id] for i, term in enumerate(phrase_terms[1:])):
+                    phrase_positions[doc_id].append(pos)
+
+    # combine positions of all terms and phrases in the query
+    positions = defaultdict(list)
+    for doc_id in term_positions.keys() & phrase_positions.keys():
+        for pos in phrase_positions[doc_id]:
+            if any(pos-i in term_positions[doc_id] for i in range(len(phrase_terms))):
+                positions[doc_id].append(pos)
+
+    # calculate tf-idf weights for each term
+    weights = defaultdict(lambda: defaultdict(float))
+    for term, doc_weights in keyword_weights.items():
+        for doc_id, weight in doc_weights.items():
+            if doc_id in positions:
+                weights[term][doc_id] = weight * sum(1 for pos_list in positions[doc_id] for pos in pos_list if term in keyword_index and doc_id in keyword_index[term] and pos in keyword_index[term][doc_id])
+
+    # add title weights and favor matches in title
+    for term, doc_weights in title_weights.items():
+        for doc_id, weight in doc_weights.items():
+            if doc_id in weights[term]:
+                weights[term][doc_id] += weight * FAVOR
+
+    # convert weights to vectors
+    vectors = defaultdict(list)
+    for term, doc_weights in weights.items():
+        for doc_id, weight in doc_weights.items():
+            vectors[doc_id].append(weight)
+
+    # calculate cosine similarity between query vector and document vectors
+    query_vector = [sum(weights[term][doc_id] for term in weights) for doc_id in range(max_pages)]
+    doc_vectors = [vectors[doc_id] for doc_id in range(max_pages)]
+    similarity_scores = cosine_similarity([query_vector], doc_vectors)[0]
+
+    # sort documents by similarity score and return top documents
+    top_docs = sorted(range(len(similarity_scores)), key=lambda i: similarity_scores[i], reverse=True)[:50]
+
+    return top_docs
+```
+
+The updated function first splits the query into individual terms and phrases. It then collects the positions of all terms in the query and finds the positions of all phrases in the query by checking if the positions of all phrase terms occur in sequence in any document. It then combines the positions of all terms and phrases in the query to create a dictionary of document IDs and their corresponding positions.
+
+The function then calculates the tf-idf weights for each term using the positions dictionary. It adds the title weights to the weights dictionary and favors matches in the title. It converts the weights dictionary to a dictionary of document vectors and calculates the cosine similarity between the query vector and document vectors. Finally, it sorts the documents by similarity score and returns the top documents.

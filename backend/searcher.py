@@ -93,7 +93,7 @@ def calculate_similarity(query, keyword_weights, title_weights, FAVOR, doc_num):
 
 
 
-def retrieval_function(query, keyword_index, title_index, max_pages, FAVOR=1.5):
+def retrieval_function(query, query_phrase_position, keyword_index, title_index, max_pages, FAVOR=1.5):
     # FAVOR: a constant to boost the rank of a page if there is a match in the title
 
     # the weights are nested dictionary containing weights
