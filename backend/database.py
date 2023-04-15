@@ -10,28 +10,31 @@ def create_tables():
     )
 
     cursor = connection.cursor()
-    # SQL statement to create the keywords table
 
-    names = ["keywords", "relationship", "inverted_index"]
+    names = ["keywords", "positions", "relationship", "inverted_index"]
     for name in names:
         cursor.execute("DROP TABLE IF EXISTS " + name)
     connection.commit()
 
+    # SQL statement to create the keywords table
     create_keywords_table = """CREATE TABLE IF NOT EXISTS keywords (
-                                    page_id INT,
-                                    word VARCHAR(255) NOT NULL,
-                                    word_id INT NOT NULL,
-                                    frequency INT NOT NULL,
-                                    PRIMARY KEY (page_id, word),
-                                    FOREIGN KEY (page_id) REFERENCES inverted_index(page_id)
-                                );
-
-                                CREATE TABLE IF NOT EXISTS positions (
-                                    page_id INT,
-                                    word VARCHAR(255) NOT NULL,
-                                    position INT NOT NULL,
-                                    FOREIGN KEY (page_id, word) REFERENCES keywords(page_id, word)
-                                )"""
+                                page_id INT,
+                                word VARCHAR(255) NOT NULL,
+                                word_id INT NOT NULL,
+                                frequency INT NOT NULL,
+                                positions TEXT,
+                                PRIMARY KEY (page_id, word),
+                                FOREIGN KEY (page_id) REFERENCES inverted_index(page_id)
+                            )"""
+    
+    # SQL statement to create the positions table
+    create_positions_table = """CREATE TABLE IF NOT EXISTS positions (
+                                page_id INT,
+                                word VARCHAR(255) NOT NULL,
+                                position INT NOT NULL,
+                                PRIMARY KEY (page_id, word, position),
+                                FOREIGN KEY (page_id, word) REFERENCES keywords(page_id, word)
+                            )"""
 
     # SQL statement to create the relationship table
     create_relationship_table = """CREATE TABLE IF NOT EXISTS relationship (
@@ -55,6 +58,8 @@ def create_tables():
                                     # FOREIGN KEY (page_id) REFERENCES relationship(page_id)
     cursor.execute(create_inverted_index_table)
     cursor.execute(create_keywords_table)
+    cursor.execute("ALTER TABLE positions DROP FOREIGN KEY positions_ibfk_1")
+    cursor.execute(create_positions_table)
     cursor.execute(create_relationship_table)
     
     connection.commit()
@@ -86,16 +91,25 @@ def insert_page(inverted_index, page, url):
 
     # Insert keywords and their frequencies into the keywords table and retrieve the corresponding word_id for each keyword
     insert_keywords = """
-        REPLACE INTO keywords (page_id, word, frequency, word_id)
-        VALUES (%s, %s, %s, %s)
+        REPLACE INTO keywords (page_id, word, frequency, positions, word_id)
+        VALUES (%s, %s, %s, %s, %s)
+    """
+    insert_positions = """
+    INSERT INTO positions (page_id, word, position)
+    VALUES (%s, %s, %s)
     """
     keywords_insertion = []
-    count = 0
-    for word in page.keywords.keys():
-        keywords_insertion.append([page.id, word, page.keywords[word]["frequency"], page.keywords[word]["word_id"]])
-        count += 1
-        if(count == 10): break
+    positions_insertion = []
+
+    for word, data in page.keywords.items():
+        frequency = data["frequency"]
+        positions = data["positions"]
+        word_id = data["word_id"]
+        keywords_insertion.append([page.id, word, frequency, positions, word_id])
+        for position in positions:
+            positions_insertion.append([page.id, word, position])
     cursor.executemany(insert_keywords, keywords_insertion)
+    cursor.executemany(insert_positions, positions_insertion)
     connection.commit()
 
 

@@ -16,7 +16,6 @@ class Page:
         self.parents = parents
 
 
-
 # Get the response of HTTP request
 def get_response(url):
     try:
