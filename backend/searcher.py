@@ -92,7 +92,7 @@ def calculate_similarity(query, query_phrase_position, keyword_weights, title_we
         doc_vector = doc_matrix[doc_id]
         doc_vector = numpy.array(doc_vector).reshape(1, -1)
         score = cosine_similarity(query_matrix, doc_vector)[0]
-        docs_similarity.append(score)
+        docs_similarity.append((doc_id, score))
         
  
     return docs_similarity
@@ -109,14 +109,17 @@ def retrieval_function(query, query_phrase_position, keyword_index, title_index,
     keyword_weights = calculate_tfxidf(keyword_index, max_pages)
     title_weights = calculate_tfxidf(title_index, max_pages)
 
-    # docs_similarity: a list - index: doc_id, value: cosine similarity
+    # docs_similarity: a list of tuples - (doc_id, cosine similarity)
     docs_similarity = calculate_similarity(query, query_phrase_position, keyword_weights, title_weights, FAVOR, max_pages)
-    top_doc = docs_similarity.index(max(docs_similarity))
 
-    for doc_id in range(len(docs_similarity)):
-        print("doc_id: ", doc_id, "score: ", docs_similarity[doc_id])
-    with open("score.txt", 'w') as file:
-        for doc_id in range(len(docs_similarity)):
-            file.write("doc_id: " + str(doc_id) + " score: " + str(docs_similarity[doc_id]) + "\n")
+    result = docs_similarity.sort(key=lambda x: x[1], reverse=True)
+    if(len(result) > 50):
+        result = result[:50]
+
+    for doc_id, score in result:
+        print("doc_id: ", doc_id, "score: ", score)
+    with open("result.txt", 'w') as file:
+        for doc_id in result:
+            file.write("doc_id: " + str(doc_id) + " score: " + str(score) + "\n")
     
-    return top_doc
+    return result

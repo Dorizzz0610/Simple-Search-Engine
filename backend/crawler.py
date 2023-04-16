@@ -59,6 +59,9 @@ def extract_keywords(words):
 
     return keywords
 
+def top_n_keywords(keywords, n):
+    top_keywords = sorted(keywords.items(), key=lambda x: x[1]["frequency"], reverse=True)
+    return top_keywords[:n]
 
 # Extract the HTML content of the URL
 def extract(url):

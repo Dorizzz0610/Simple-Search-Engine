@@ -34,6 +34,20 @@ def handle_query(query):
 
     return new_words, new_phrase_position
 
+
+def return_to_frontend(crawled_result, search_result):
+    # TODO: change crawled_result with keys in page_id; change the codes used crawled_result; finish this function
+    result = []
+    for page_id, score in search_result:
+        page = crawled_result[page_id]
+        result.append({
+            "title": page["title"],
+            "url": page["url"],
+            "body": page["body"]
+        })
+    return result
+
+
 def main():
     starting_url = "https://cse.hkust.edu.hk"
     MAX_PAGES = 10
@@ -62,9 +76,7 @@ def main():
 
     # Step 3: Search the query
     print("Searching the query...")
-    top_doc = searcher.retrieval_function(query, query_phrase_position, keyword_index, title_index, MAX_PAGES, 1.5)
-
-    print("The best fit page is: " + str(top_doc))
+    search_result = searcher.retrieval_function(query, query_phrase_position, keyword_index, title_index, MAX_PAGES, 1.5)
     
 
 
