@@ -60,13 +60,13 @@ def check_phrase_positions(phrase_positions, doc_positions):
 
 
 
-def calculate_similarity(query, query_phrase_position, keyword_weights, title_weights, FAVOR, doc_num):
+def calculate_similarity(query, query_phrase_position, body_weights, title_weights, FAVOR, doc_num):
     # query: a list
     # tf_idf_weights: a dictionary. key: term, value: dictionary,  {doc_id: tf-idf_weight}
     query = indexer.stem(query)
     print("stemmed query: ", query)
 
-    all_terms = set(keyword_weights.keys()).union(set(title_weights.keys())).union(set(query))
+    all_terms = set(body_weights.keys()).union(set(title_weights.keys())).union(set(query))
 
     query_vector = {term: 0 for term in all_terms}
     for term in query:
@@ -75,12 +75,14 @@ def calculate_similarity(query, query_phrase_position, keyword_weights, title_we
     doc_vectors = [{term: 0 for term in all_terms} for i in range(doc_num)]
     for doc_id in range(doc_num):            
         for term in all_terms:
-            if term in keyword_weights.keys() and doc_id in keyword_weights[term].keys():
-                weight_dict = keyword_weights[term]
+            # Handling single words
+            if term in body_weights.keys() and doc_id in body_weights[term].keys():
+                weight_dict = body_weights[term]
                 doc_vectors[doc_id][term] += weight_dict[doc_id]
             if term in title_weights.keys() and doc_id in title_weights[term].keys():
                 weight_dict = title_weights[term]
                 doc_vectors[doc_id][term] += weight_dict[doc_id] * FAVOR
+            # Handling phrases
 
     # Convert query_vector and doc_vectors to matrices
     query_matrix = [list(query_vector.values())]
@@ -100,17 +102,17 @@ def calculate_similarity(query, query_phrase_position, keyword_weights, title_we
 
 
 
-def retrieval_function(query, query_phrase_position, keyword_index, title_index, max_pages, FAVOR=1.5):
+def retrieval_function(query, query_phrase_position, body_index, title_index, max_pages, FAVOR=1.5):
     # FAVOR: a constant to boost the rank of a page if there is a match in the title
 
     # the weights are nested dictionary containing weights
     # outer dictionary - key: term  value: inner dictionary
     # inner dictionary - key: doc_id value: tfxidf weight
-    keyword_weights = calculate_tfxidf(keyword_index, max_pages)
+    body_weights = calculate_tfxidf(body_index, max_pages)
     title_weights = calculate_tfxidf(title_index, max_pages)
 
     # docs_similarity: a list of tuples - (doc_id, cosine similarity)
-    docs_similarity = calculate_similarity(query, query_phrase_position, keyword_weights, title_weights, FAVOR, max_pages)
+    docs_similarity = calculate_similarity(query, query_phrase_position, body_weights, title_weights, FAVOR, max_pages)
 
     result = docs_similarity.sort(key=lambda x: x[1], reverse=True)
     if(len(result) > 50):

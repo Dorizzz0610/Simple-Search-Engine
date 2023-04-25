@@ -40,18 +40,8 @@ def stem(words):
     return stemmed_words
 
 
-def get_phrases(text):
-    phrases = []
-    # bigram
-    for i in range(len(text)-1):
-        phrases.append(text[i] + " " + text[i+1])
-    # trigram
-    for i in range(len(text)-2):
-        phrases.append(text[i] + " " + text[i+1] + " " + text[i+2])
-    return phrases
 
-
-def indexing(keyword_index, title_index, crawled_result):
+def indexing(body_index, title_index, crawled_result):
     # indexing the keywords and body of a set of crawled pages    
 
     for page in crawled_result.values():
@@ -64,9 +54,6 @@ def indexing(keyword_index, title_index, crawled_result):
         title = stem(original_title)
         body = stem(original_body)
         
-        # handle searchs containing phrases
-        title_phrases = get_phrases(title)
-        body_phrases = get_phrases(body)
 
         # insert into title_index
 
@@ -74,11 +61,11 @@ def indexing(keyword_index, title_index, crawled_result):
         # insert into keyword_index
         for i in range(len(title)):
             original_title_word = original_title[i]
-            title_word = body[i]
-            if(title_word not in title_phrases):
-                keyword_index[title_word].append((page["page_id"], title_keywords_dict[original_title_word]["frequency"], title_keywords_dict[original_title_word]["positions"]))
+            title_word = title[i]
+            if(title_word not in title_index):
+                body_index[title_word].append((page["page_id"], title_keywords_dict[original_title_word]["frequency"], title_keywords_dict[original_title_word]["positions"]))
             else:
-                record_list = keyword_index[title_word]
+                record_list = body_index[title_word]
                 for record in record_list:
                     if(record[0] == page["page_id"]):
                         record[1] += title_keywords_dict[original_title_word]["frequency"]
@@ -90,10 +77,10 @@ def indexing(keyword_index, title_index, crawled_result):
         for i in range(len(body)):
             original_body_word = original_body[i]
             body_word = body[i]
-            if(body_word not in body_phrases):
-                keyword_index[body_word].append((page["page_id"], body_keywords_dict[original_body_word]["frequency"], body_keywords_dict[original_body_word]["positions"]))
+            if(body_word not in body_index):
+                body_index[body_word].append((page["page_id"], body_keywords_dict[original_body_word]["frequency"], body_keywords_dict[original_body_word]["positions"]))
             else:
-                record_list = keyword_index[body_word]
+                record_list = body_index[body_word]
                 for record in record_list:
                     if(record[0] == page["page_id"]):
                         record[1] += body_keywords_dict[original_body_word]["frequency"]
@@ -101,10 +88,10 @@ def indexing(keyword_index, title_index, crawled_result):
                         break
 
     with open('keyword.txt', 'w') as file:
-        for(word, page_list) in keyword_index.items():
+        for(word, page_list) in body_index.items():
             for page in page_list:
                     file.write("word: " + word + " page: " + str(page[0]) + " count: " + str(page[1]) + "positions: " + str(page[2]) + "\n")
-    return keyword_index, title_index
+    return body_index, title_index
 
 
 
