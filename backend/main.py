@@ -71,12 +71,12 @@ def main():
     body_index = defaultdict(list)
     title_index = defaultdict(list)
 
-    body_index, title_index = indexer.indexing(body_index, title_index, crawled_result)
+    body_index, title_index = indexer.indexing(query, query_phrase_position, body_index, title_index, crawled_result)
 
 
     # Step 3: Search the query
     print("Searching the query...")
-    search_result = searcher.retrieval_function(query, query_phrase_position, body_index, title_index, MAX_PAGES, 1.5)
+    search_result = searcher.retrieval_function(query, body_index, title_index, MAX_PAGES, 1.5)
     
 
 

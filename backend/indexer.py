@@ -40,8 +40,24 @@ def stem(words):
     return stemmed_words
 
 
+def adding_phrase_to_index(query, query_phrase_position, index):
+    for phrase_info in query_phrase_position:
+        phrase = query[phrase_info[2]]
+        words_info_list = []
+        for i, word in enumerate(phrase):
+            if(word not in index):
+                # the phrase isn't in the index
+                break
+            words_info_list.append(index[word])
+        # the phrase is in the index
+        
+        for word in phrase:
+            words_info_list.append(index[word])
+                
+    return index          
+                
 
-def indexing(body_index, title_index, crawled_result):
+def indexing(query, query_phrase_position, body_index, title_index, crawled_result):
     # indexing the keywords and body of a set of crawled pages    
 
     for page in crawled_result.values():
@@ -58,7 +74,7 @@ def indexing(body_index, title_index, crawled_result):
         # insert into title_index
 
         title_keywords_dict = crawler.extract_keywords(original_title)
-        # insert into keyword_index
+        # insert into body_index
         for i in range(len(title)):
             original_title_word = original_title[i]
             title_word = title[i]
@@ -73,7 +89,7 @@ def indexing(body_index, title_index, crawled_result):
                         break
 
         body_keywords_dict = crawler.extract_keywords(original_body)
-        # insert into keyword_index
+        # insert into body_index
         for i in range(len(body)):
             original_body_word = original_body[i]
             body_word = body[i]
@@ -86,6 +102,9 @@ def indexing(body_index, title_index, crawled_result):
                         record[1] += body_keywords_dict[original_body_word]["frequency"]
                         record[2].extend(body_keywords_dict[original_body_word]["positions"])
                         break
+
+    body_index = adding_phrase_to_index(query, query_phrase_position, body_index)
+    title_index = adding_phrase_to_index(query, query_phrase_position, title_index)
 
     with open('keyword.txt', 'w') as file:
         for(word, page_list) in body_index.items():

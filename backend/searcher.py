@@ -60,7 +60,7 @@ def check_phrase_positions(phrase_positions, doc_positions):
 
 
 
-def calculate_similarity(query, query_phrase_position, body_weights, title_weights, FAVOR, doc_num):
+def calculate_similarity(query, body_weights, title_weights, FAVOR, doc_num):
     # query: a list
     # tf_idf_weights: a dictionary. key: term, value: dictionary,  {doc_id: tf-idf_weight}
     query = indexer.stem(query)
@@ -75,14 +75,12 @@ def calculate_similarity(query, query_phrase_position, body_weights, title_weigh
     doc_vectors = [{term: 0 for term in all_terms} for i in range(doc_num)]
     for doc_id in range(doc_num):            
         for term in all_terms:
-            # Handling single words
             if term in body_weights.keys() and doc_id in body_weights[term].keys():
                 weight_dict = body_weights[term]
                 doc_vectors[doc_id][term] += weight_dict[doc_id]
             if term in title_weights.keys() and doc_id in title_weights[term].keys():
                 weight_dict = title_weights[term]
                 doc_vectors[doc_id][term] += weight_dict[doc_id] * FAVOR
-            # Handling phrases
 
     # Convert query_vector and doc_vectors to matrices
     query_matrix = [list(query_vector.values())]
