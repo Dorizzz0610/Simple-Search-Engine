@@ -43,8 +43,6 @@ def extract_keywords(words):
         word = word.strip().lower()
         word = ''.join(ch for ch in word if ch not in exclude)
     
-    phrases = indexer.get_phrases(words)
-    words = words + phrases
 
     for position, word in enumerate(words):
         if word in keywords:
@@ -123,6 +121,16 @@ def store(crawled_result, url, page):
     
     return crawled_result
 
+
+def store_based_on_id(crawled_result):
+    new_crawled_result = [None] * len(crawled_result)
+    for url in crawled_result:
+        new_crawled_result[crawled_result[url]["page_id"]] = crawled_result[url]
+        new_crawled_result[crawled_result[url]["page_id"]]["url"] = url
+    return new_crawled_result
+
+
+
 def crawl(url, max_pages):
 
     # database.create_tables()
@@ -156,7 +164,8 @@ def crawl(url, max_pages):
             for child in crawled_result[url]["children"]:
                 if child in crawled_result.keys():
                     crawled_result[child]["parents"].append(url)
-        
+
+    crawled_result = store_based_on_id(crawled_result)
     
     return crawled_result
 
