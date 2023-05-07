@@ -1,9 +1,10 @@
 import database
-import indexer
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 import string
+from urllib.parse import urlparse, urljoin
+
 
 
 class Page:
@@ -89,11 +90,19 @@ def extract(url):
 
     # Children links in the page
     children = []
-    for child in page.find_all('a'):
-        child_link = child.get('href')
-        if child_link and child_link.startswith('http'):
-            if child_link not in children and child_link != url:
-                children.append(child.get('href'))
+    parsed_url = urlparse(url)
+    base_url = url[:url.rfind("/") + 1]
+
+    
+    if(page.find_all('a')):
+        for child in page.find_all('a'):
+            child_link = child.get('href')
+            if child_link: 
+                if child_link.startswith("http"): # absolute link
+                    children.append(child_link)
+                else: # relative link
+                    children.append(urljoin(base_url, child_link))
+        
     parents = []
     result = Page(-1, title, last_modified, size, keywords, children, parents) # -1 is just a placeholder
     return result
@@ -143,6 +152,7 @@ def crawl(url, max_pages):
 
     while crawl_list and count < max_pages:
         current_url = crawl_list.pop(0)
+        print("CRAWLING current_url: ", current_url)
         if current_url in crawled_list:
             continue
         if(get_response(current_url)):
@@ -150,6 +160,7 @@ def crawl(url, max_pages):
             current_page.id = count
             crawled_result[current_url] = {}
             crawled_result[current_url]["children"] = current_page.children
+            print("children of current_url: ", current_page.children)
             if current_page.children:
                 for child in current_page.children:
                     if child not in crawled_list and child not in crawl_list: #avoid cyclic?
@@ -165,7 +176,11 @@ def crawl(url, max_pages):
                 if child in crawled_result.keys():
                     crawled_result[child]["parents"].append(url)
 
+
+    create_txt(crawled_result, 'spider result.txt')
+
     crawled_result = store_based_on_id(crawled_result)
+
     
     return crawled_result
 
