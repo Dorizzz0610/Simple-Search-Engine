@@ -28,17 +28,30 @@ def remove_stopwords(words):
 
 
 
-def stem(words):
+def stem(text, is_phrase):
     stopwords = set(line.strip() for line in open('stopwords.txt')) 
-
     stemmer = PorterStemmer() 
 
-    stemmed_words = [] 
-    for word in words: 
-        stemmed_word = stemmer.stem(word) 
-        if stemmed_word not in stopwords: 
-            stemmed_words.append(stemmed_word) 
-    return stemmed_words
+    stemmed_text = [] 
+
+    if(is_phrase):
+        for phrase in text: 
+            stemmed_phrase = ""
+            for word in phrase.split():
+                stemmed_word = stemmer.stem(word) 
+                print("stemmed_word: ", stemmed_word)
+                if stemmed_word not in stopwords: 
+                    stemmed_phrase += (stemmed_word + " ")
+            if len(stemmed_phrase) > 0 and stemmed_phrase[-1] == " ":
+                stemmed_phrase = stemmed_phrase[:-1] 
+            stemmed_text.append(stemmed_phrase)
+    else:
+        for word in text: 
+            stemmed_word = stemmer.stem(word) 
+            if stemmed_word not in stopwords: 
+                stemmed_text.append(stemmed_word) 
+
+    return stemmed_text
 
 
 # def adding_phrase_to_index(query, query_phrase_position, index):
@@ -70,8 +83,8 @@ def indexing(crawled_result):
         original_title = remove_stopwords([word.lower() for word in original_title])
         original_body = remove_stopwords([word.lower() for word in original_body])
 
-        title = stem(original_title)
-        body = stem(original_body)
+        title = stem(original_title, False)
+        body = stem(original_body, False)
         
 
         # insert into title_index
