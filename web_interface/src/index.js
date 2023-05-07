@@ -1,16 +1,32 @@
 import React from 'react'
-import ReactDOM from 'react-dom/client'
+import ReactDOM from 'react-dom'
 import './index.css'
 import App from './App'
 import reportWebVitals from './reportWebVitals'
-import searchBox from './searchBox'
+import SearchBox from './searchBox'
 
-const root = ReactDOM.createRoot(document.getElementById('root'))
-root.render(
+function handleSearchSubmit(searchText) {
+  fetch('/search', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ searchText: searchText }),
+  })
+    .then((response) => response.text())
+    .then((result) => {
+      console.log(result)
+    })
+    .catch((error) => {
+      console.error(error)
+    })
+}
+
+ReactDOM.render(
   <React.StrictMode>
-    <App />
-    <searchBox />
-  </React.StrictMode>
+    <SearchBox onSubmit={handleSearchSubmit} />
+  </React.StrictMode>,
+  document.getElementById('root')
 )
 
 // If you want to start measuring performance in your app, pass a function
