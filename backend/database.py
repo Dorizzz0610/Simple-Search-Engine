@@ -2,6 +2,7 @@ import mysql.connector
 import subprocess
 
 def create_tables():
+    print("creating tables")
     connection = mysql.connector.connect(
         host="localhost",
         user="COMP4321",
@@ -11,30 +12,6 @@ def create_tables():
 
     cursor = connection.cursor()
 
-    names = ["keywords", "positions", "relationship", "inverted_index"]
-    for name in names:
-        cursor.execute("DROP TABLE IF EXISTS " + name)
-    connection.commit()
-
-    # SQL statement to create the keywords table
-    create_keywords_table = """CREATE TABLE IF NOT EXISTS keywords (
-                                page_id INT,
-                                word VARCHAR(255) NOT NULL,
-                                word_id INT NOT NULL,
-                                frequency INT NOT NULL,
-                                positions TEXT,
-                                PRIMARY KEY (page_id, word),
-                                FOREIGN KEY (page_id) REFERENCES inverted_index(page_id)
-                            )"""
-    
-    # SQL statement to create the positions table
-    create_positions_table = """CREATE TABLE IF NOT EXISTS positions (
-                                page_id INT,
-                                word VARCHAR(255) NOT NULL,
-                                position INT NOT NULL,
-                                PRIMARY KEY (page_id, word, position),
-                                FOREIGN KEY (page_id, word) REFERENCES keywords(page_id, word)
-                            )"""
 
     # SQL statement to create the relationship table
     create_relationship_table = """CREATE TABLE IF NOT EXISTS relationship (
@@ -43,32 +20,45 @@ def create_tables():
                                 other_URL TEXT NOT NULL,
                                 other_page_id INT,
                                 PRIMARY KEY (page_id, other_URL(700)),
-                                FOREIGN KEY (page_id) REFERENCES inverted_index(page_id)
+                                UNIQUE KEY page_url_unique (page_id, other_URL)
                             )"""
-
-    # SQL statement to create the inverted index table
-    create_inverted_index_table = """CREATE TABLE IF NOT EXISTS inverted_index (
-                                    page_id INT NOT NULL PRIMARY KEY,
-                                    url TEXT,
-                                    title VARCHAR(255),
-                                    last_modified VARCHAR(255),
-                                    page_size INT
-                                )"""
-                                    # FOREIGN KEY (page_id) REFERENCES keywords(page_id),
-                                    # FOREIGN KEY (page_id) REFERENCES relationship(page_id)
-    cursor.execute(create_inverted_index_table)
-    cursor.execute(create_keywords_table)
-    cursor.execute("ALTER TABLE positions DROP FOREIGN KEY positions_ibfk_1")
-    cursor.execute(create_positions_table)
     cursor.execute(create_relationship_table)
-    
+
+    # SQL statement to create the keywords table
+    create_keywords_table = """CREATE TABLE IF NOT EXISTS keywords (
+                                page_id INT,
+                                word VARCHAR(255) NOT NULL,
+                                word_id INT NOT NULL,
+                                frequency INT NOT NULL,
+                                PRIMARY KEY (page_id, word)
+                            )"""
+    cursor.execute(create_keywords_table)
+
+    create_body_index_table = """CREATE TABLE IF NOT EXISTS title_index (
+                            word VARCHAR(255) NOT NULL,
+                            page_id INT NOT NULL,
+                            frequency INT NOT NULL,
+                            positions TEXT NOT NULL,
+                            PRIMARY KEY (word, page_id)
+                      )"""
+    cursor.execute(create_body_index_table)
+
+    create_title_index_table = """CREATE TABLE IF NOT EXISTS body_index (
+                            word VARCHAR(255) NOT NULL,
+                            page_id INT NOT NULL,
+                            frequency INT NOT NULL,
+                            positions TEXT NOT NULL,
+                            PRIMARY KEY (word, page_id)
+                      )"""
+    cursor.execute(create_title_index_table)
+
+
     connection.commit()
     connection.close()
 
 
 
-
-def insert_page(inverted_index, page, url):
+def insert_page(crawled_result, page, url):
     connection = mysql.connector.connect(
         host="localhost",
         user="COMP4321",
@@ -78,64 +68,83 @@ def insert_page(inverted_index, page, url):
 
     cursor =  connection.cursor()
 
-    insert = """
-        INSERT INTO inverted_index (page_id, url, title, last_modified, page_size)
-        VALUES (%s, %s, %s, %s, %s)
-    """
-
-    value = (page.id, url, page.title, page.last_modified, page.size)
-    cursor.execute(insert, value)
-    connection.commit()
-    
-    
 
     # Insert keywords and their frequencies into the keywords table and retrieve the corresponding word_id for each keyword
     insert_keywords = """
-        REPLACE INTO keywords (page_id, word, frequency, positions, word_id)
-        VALUES (%s, %s, %s, %s, %s)
-    """
-    insert_positions = """
-    INSERT INTO positions (page_id, word, position)
-    VALUES (%s, %s, %s)
+        REPLACE INTO keywords (page_id, word, frequency, word_id)
+        VALUES (%s, %s, %s, %s)
     """
     keywords_insertion = []
-    positions_insertion = []
-
-    for word, data in page.keywords.items():
-        frequency = data["frequency"]
-        positions = data["positions"]
-        word_id = data["word_id"]
-        keywords_insertion.append([page.id, word, frequency, positions, word_id])
-        for position in positions:
-            positions_insertion.append([page.id, word, position])
+    count = 0
+    for word in page.keywords.keys():
+        keywords_insertion.append([page.id, word, page.keywords[word]["frequency"], page.keywords[word]["word_id"]])
+        count += 1
+        if(count == 10): break
     cursor.executemany(insert_keywords, keywords_insertion)
-    cursor.executemany(insert_positions, positions_insertion)
     connection.commit()
 
 
     # Insert each child url into the children table
     for child_url in page.children:
-        if(child_url in inverted_index):
-            child_id = inverted_index[child_url]["page_id"]
+        child_id = None
+        if(child_url in crawled_result):
+            child_id = crawled_result[child_url]["page_id"]
+        if child_id is not None:
             cursor.execute("""
-                INSERT INTO relationship (page_id, relationship, other_URL, other_page_id) VALUES (%s, %s, %s, %s)
+                INSERT IGNORE INTO relationship (page_id, relationship, other_URL, other_page_id)
+                VALUES (%s, %s, %s, %s)
             """, (page.id, "PARENT", child_url, child_id))
-
         else:
             cursor.execute("""
-                INSERT INTO relationship (page_id, relationship, other_URL) VALUES (%s, %s, %s)
+                INSERT IGNORE INTO relationship (page_id, relationship, other_URL)
+                VALUES (%s, %s, %s)
             """, (page.id, "PARENT", child_url))
+        connection.commit()
 
 
     for parent_url in page.parents:
-        parent_id = inverted_index[parent_url]["page_id"]
-        cursor.execute("""
-            INSERT INTO relationship (page_id, relationship, other_URL, other_page_id) VALUES (%s, %s, %s, %s)
-        """, (page.id, "CHILDREN", parent_url, parent_id))
-    connection.commit()
+        parent_id = None
+        if parent_url in crawled_result:  
+            parent_id = crawled_result[parent_url]["page_id"]
+        if parent_id is not None:
+            cursor.execute("""
+                INSERT IGNORE INTO relationship (page_id, relationship, other_URL, other_page_id)
+                VALUES (%s, %s, %s, %s)
+            """, (page.id, "CHILDREN", parent_url, parent_id))
+        else:
+            cursor.execute("""
+                INSERT IGNORE INTO relationship (page_id, relationship, other_URL)
+                VALUES (%s, %s, %s)
+            """, (page.id, "CHILDREN", parent_url))
+        connection.commit()
 
     connection.close()
 
+
+def insert_index(body_index, title_index):
+    connection = mysql.connector.connect(
+        host="localhost",
+        user="COMP4321",
+        password="COMP4321Crawler",
+        database="CrawlerDB"
+    )
+    cursor = connection.cursor()
+
+    for word, page_list in body_index.items():
+        for page in page_list:
+            cursor.execute('''INSERT INTO body_index (word, page_id, frequency, positions)
+                              VALUES (%s, %s, %s, %s)
+                              ON DUPLICATE KEY UPDATE frequency = frequency + %s, positions = CONCAT_WS(',', positions, %s)''',
+                           (word, page[0], page[1], ','.join(map(str, page[2])), page[1], ','.join(map(str, page[2]))))
+
+    for word, page_list in title_index.items():
+        for page in page_list:
+            cursor.execute('''INSERT INTO title_index (word, page_id, frequency, positions)
+                              VALUES (%s, %s, %s, %s)
+                              ON DUPLICATE KEY UPDATE frequency = frequency + %s, positions = CONCAT_WS(',', positions, %s)''',
+                           (word, page[0], page[1], ','.join(map(str, page[2])), page[1], ','.join(map(str, page[2]))))
+
+    connection.commit()
 
 
 def export_tables():
@@ -143,14 +152,9 @@ def export_tables():
     config = {
         'user': 'COMP4321',
         'password': 'COMP4321Crawler',
-        'database': 'crawlerdb',
+        'database': 'CrawlerDB',
         'host': 'localhost'
     }
 
-    # with open('spider result.sql', 'w') as f:     
-    #     subprocess.call(["mysqldump", "-u", config['user'], "-p" + config['password'], "-h", config['host'], "--where=1 limit 10000", config['database'], "table"], 
-    #       stdout=f)
-    
-    cmd = ['mysqldump', '-u', config['user'], '-p'+config['password'], '--databases', config['database'], '--result-file', 'spider_result.sql', '--no-create-info']
-    # with open('spider result.db', 'wb') as f:
-    subprocess.run(cmd)    
+    cmd = ['mysqldump', '-u', config['user'], '-p'+config['password'], '--databases', config['database'], '--result-file', 'result.sql', '--no-create-info']
+    subprocess.run(cmd)
