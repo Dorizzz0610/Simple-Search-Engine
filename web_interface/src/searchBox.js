@@ -1,8 +1,10 @@
 import React, { useState } from 'react'
 import './searchBox.css'
+import Loading from './Loading'
 
 function SearchBox(props) {
   const [inputText, setInputText] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
   function handleInputChange(event) {
     setInputText(event.target.value)
@@ -10,6 +12,7 @@ function SearchBox(props) {
 
   function handleSubmit(event) {
     event.preventDefault()
+    setIsLoading(true)
     props.onSubmit(inputText)
   }
 
@@ -20,6 +23,7 @@ function SearchBox(props) {
         <input type="text" value={inputText} onChange={handleInputChange} />
       </label>
       <button type="submit">Submit</button>
+      {isLoading && <Loading />}
     </form>
   )
 }
