@@ -13,8 +13,9 @@ function SearchResult(props) {
                 fontWeight: i === 0 ? 'bold' : 'normal',
                 fontSize: i === 0 ? '20px' : '16px',
               }}
+              dangerouslySetInnerHTML={{ __html: string }}
             >
-              {string}
+              {/* {string} */}
             </p>
           ))}
         </ul>

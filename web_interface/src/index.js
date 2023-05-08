@@ -36,8 +36,8 @@ function App() {
     }
   }, [])
 
-  function handleSearchSubmit(searchText) {
-    socket.emit('search', searchText)
+  function handleSearchSubmit(data) {
+    socket.emit('search', data)
   }
 
   return (
