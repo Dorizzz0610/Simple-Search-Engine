@@ -176,7 +176,8 @@ def calculate_similarity(query_term, query_phrase, body_index, title_index, body
     for doc_id in range(len(doc_vectors)):
         doc_vector = doc_matrix[doc_id]
         doc_vector = numpy.array(doc_vector).reshape(1, -1)
-        score = cosine_similarity(query_matrix, doc_vector)[0][0]
+        score = cosine_similarity(query_matrix, doc_vector)[0][0]*1000
+        score = round(score, 2)
         docs_similarity.append((doc_id, score))
         
  
