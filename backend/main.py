@@ -3,9 +3,9 @@ import crawler
 import searcher
 import database
 import json
-from flask import Flask
+from flask import Flask, request, jsonify, render_template, redirect, url_for, session, flash
 from flask_socketio import SocketIO, emit
-
+from flask_cors import CORS
 
 
 def handle_query(query):
@@ -53,24 +53,22 @@ def replace_chars(str):
     str = str.replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;') # use 4 spaces for each tab
     return str
 
-
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins='*')
+CORS(app)
 
-@socketio.on('search')
-def search(data):
+@app.route('/search', methods=['POST'])
+
+def search():
+    data = request.get_json()
     print(data)
 
     query = data['query']
     starting_url = data['startingURL']
     max_pages = int(data['maxPages'])
 
-    emit('search_start')
-    print("Waiting for search request from React")
     results = main(query, starting_url, max_pages)
-    results = json.dumps(results)
-    emit_bool = emit('search_results', results)
-    print("Is emit successful? " + str(emit_bool))
+    
+    return jsonify(results)
 
 
 def main(query, starting_url, MAX_PAGES):
@@ -154,6 +152,6 @@ def main(query, starting_url, MAX_PAGES):
 
 
 if __name__ == "__main__":
-    socketio.run(app, debug=False, port=5000)
+    app.run(debug=False, port=5000)
 
 

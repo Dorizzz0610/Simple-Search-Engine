@@ -6,10 +6,6 @@ import SearchBox from './searchBox'
 import SearchResult from './searchResult'
 import Loading from './Loading'
 
-import io from 'socket.io-client'
-
-const socket = io('http://localhost:5000')
-
 function App() {
   const [searchResults, setSearchResults] = useState([])
   const [isLoading, setIsLoading] = useState(false)
@@ -17,32 +13,39 @@ function App() {
   const [isSearchButtonDisabled, setIsSearchButtonDisabled] = useState(false)
 
   useEffect(() => {
-    socket.on('search_start', () => {
-      setSearchStatus('Searching...')
-      setIsLoading(true)
-      setIsSearchButtonDisabled(true)
-    })
-    socket.on('search_results', (results) => {
-      console.log('search_results:', results)
-      try {
-        setSearchResults(JSON.parse(results))
-        setSearchStatus('')
-        setIsLoading(false)
-        setIsSearchButtonDisabled(false)
-      } catch (error) {
-        console.error('Failed to parse JSON:', error)
-      }
-    })
-
     return () => {
-      socket.off('search_start')
-      socket.off('search_results')
+      setSearchResults([])
     }
   }, [])
 
   function handleSearchSubmit(data) {
+    setIsLoading(true)
+    setIsSearchButtonDisabled(true)
+    setSearchStatus('Searching...')
     setSearchResults([])
-    socket.emit('search', data)
+
+    const requestOptions = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }
+
+    fetch('http://localhost:5000/search', requestOptions)
+      .then((response) => response.json())
+      .then((data) => {
+        console.log('search_results:', data)
+        try {
+          setSearchResults(data)
+          setSearchStatus('')
+          setIsLoading(false)
+          setIsSearchButtonDisabled(false)
+        } catch (error) {
+          console.error('Failed to parse JSON:', error)
+        }
+      })
+      .catch((error) => {
+        console.error('Error:', error)
+      })
   }
 
   return (
