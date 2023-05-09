@@ -14,6 +14,6 @@ sklearn
 statistiscs
 urllib
 flask
-flask_socketio
+Flask-Cors
 simple-websocket
 json
