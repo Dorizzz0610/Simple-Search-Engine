@@ -1,6 +1,11 @@
 import indexer
 import crawler
 import searcher
+import database
+import json
+from flask import Flask
+from flask_socketio import SocketIO, emit
+
 
 
 def handle_query(query):
@@ -43,26 +48,39 @@ def handle_query(query):
 
     return single_terms, phrases
 
-
-def return_to_frontend(crawled_result, search_result):
-    # TODO: change crawled_result with keys in page_id; change the codes used crawled_result; finish this function
-    result = []
-    for page_id, score in search_result:
-        page = crawled_result[page_id]
-        result.append({
-            "title": page["title"],
-            "url": page["url"],
-            "body": page["body"]
-        })
-    return result
+def replace_chars(str):
+    str = str.replace('\n', '<br>')
+    str = str.replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;') # use 4 spaces for each tab
+    return str
 
 
-def main():
-    starting_url = "https://cse.hkust.edu.hk"
-    MAX_PAGES = 30
+app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins='*')
+
+@socketio.on('search')
+def search(data):
+    print(data)
+
+    query = data['query']
+    starting_url = data['startingURL']
+    max_pages = int(data['maxPages'])
+
+    emit('search_start')
+    print("Waiting for search request from React")
+    results = main(query, starting_url, max_pages)
+    results = json.dumps(results)
+    emit_bool = emit('search_results', results)
+    print("Is emit successful? " + str(emit_bool))
+
+
+def main(query, starting_url, MAX_PAGES):
+    print(query)
+    #starting_url = "https://www.cse.ust.hk/~kwtleung/COMP4321/testpage.htm"
+    #starting_url = "https://cse.hkust.edu.hk/"
+    #MAX_PAGES = 5
     
     # Step 0: Get the query
-    query = input("Enter your query: ")
+    #query = input("Enter your query: ")
     query_term, query_phrase = handle_query(query)
 
     print(query_term)
@@ -72,6 +90,7 @@ def main():
     # Step 1: Crawl the pages
     print("Crawling the pages...")
     crawled_result = crawler.crawl(starting_url, MAX_PAGES) # store based on id 
+    print(crawled_result)
 
 
     # Step 2: Index the crawled pages
@@ -79,21 +98,62 @@ def main():
 
 
     body_index, title_index = indexer.indexing(crawled_result)
+    print(body_index)
+    database.export_tables()
 
 
     # Step 3: Search the query
     print("Searching the query...")
     search_result = searcher.retrieval_function(query_term, query_phrase, body_index, title_index, MAX_PAGES, 1.5)
     
+    result_front_end = []
+
+    for doc_id, score in search_result:
+        current_result = []
+        current_result.append("Score: " + str(score) + "    " + crawled_result[doc_id]["title"])
+        current_result.append("  URL: " + crawled_result[doc_id]["url"])
+
+        current_result.append("  " + "Last modified time: " + crawled_result[doc_id]["last_modified"] + ", Page size: " + str(crawled_result[doc_id]["page_size"]) + '\n')
+        
+        top_n_words = crawler.top_n_keywords(crawled_result[doc_id]["keywords"], 5)
+        top_n_words_str = "  Top 5 keywords: "
+        for word in top_n_words:
+            top_n_words_str += (word + " " + str(crawled_result[doc_id]["keywords"][word]["frequency"]) + "; ")
+        current_result.append(top_n_words_str + '\n')
+
+        current_result.append("  Parent links: ")
+        count = 0
+        for parent in crawled_result[doc_id]["parents"]:
+            current_result.append("    " + parent)
+            count += 1
+            if count == 5:
+                current_result.append("    ......\n")
+                break
+
+        current_result.append("  Children links: ")
+        count = 0
+        for child in crawled_result[doc_id]["children"]:
+            current_result.append("    " + child)
+            count += 1
+            if count == 5:
+                current_result.append("    ......\n")
+                break
+        current_result.append('\n')
+
+        for string in current_result:
+            string = replace_chars(string)
+        result_front_end.append(current_result)
+
+    print(result_front_end)
+    print("length: ", len(result_front_end))
+    print("========================Search End========================")
+    return result_front_end
 
 
-    # inverted_index = crawler.crawl(starting_url, MAX_PAGES)
-    crawler.create_txt(crawled_result, 'spider result.txt')
-    # crawler.database.export_tables()
     
-    
+
 
 if __name__ == "__main__":
-    main()
+    socketio.run(app, debug=False, port=5000)
 
 
