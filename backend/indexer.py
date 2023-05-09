@@ -1,15 +1,8 @@
 from nltk.stem.porter import PorterStemmer 
 from collections import defaultdict
 import crawler
+import database
 
-# An indexer which extracts keywords from a page and inserts them into an inverted file
-
-# - The indexer first removes all stop words from the file; a dictionary of stop words will be provided
-# - It then transforms words into stems using the Porter’s algorithm
-# - It inserts the stems into the two inverted files:
-#     - all stems extracted from the page body, together with all statistical information needed to support the vector space model (i.e., no need to support Boolean operations), are inserted into one inverted file
-#     - all stems extracted from the page title are inserted into another inverted file
-# - The indexes must be able to support phrase search such as “hong kong” in page titles and page bodies.
 
 
 def remove_stopwords(words):
@@ -39,7 +32,6 @@ def stem(text, is_phrase):
             stemmed_phrase = ""
             for word in phrase.split():
                 stemmed_word = stemmer.stem(word) 
-                print("stemmed_word: ", stemmed_word)
                 if stemmed_word not in stopwords: 
                     stemmed_phrase += (stemmed_word + " ")
             if len(stemmed_phrase) > 0 and stemmed_phrase[-1] == " ":
@@ -51,24 +43,7 @@ def stem(text, is_phrase):
             if stemmed_word not in stopwords: 
                 stemmed_text.append(stemmed_word) 
 
-    return stemmed_text
-
-
-# def adding_phrase_to_index(query, query_phrase_position, index):
-#     for phrase_info in query_phrase_position:
-#         phrase = query[phrase_info[2]]
-#         words_info_list = []
-#         for i, word in enumerate(phrase):
-#             if(word not in index):
-#                 # the phrase isn't in the index
-#                 break
-#             words_info_list.append(index[word])
-#         # the phrase is in the index
-        
-#         for word in phrase:
-#             words_info_list.append(index[word])
-                
-#     return index          
+    return stemmed_text       
                 
 
 def indexing(crawled_result):
@@ -92,6 +67,8 @@ def indexing(crawled_result):
         title_keywords_dict = crawler.extract_keywords(original_title)
         for i in range(len(title)):
             original_title_word = original_title[i]
+            if(original_title_word not in title_keywords_dict.keys()):
+                continue
             title_word = title[i]
             if(title_word not in title_index):
                 title_index[title_word].append([page["page_id"], title_keywords_dict[original_title_word]["frequency"], title_keywords_dict[original_title_word]["positions"]])
@@ -112,6 +89,8 @@ def indexing(crawled_result):
         body_keywords_dict = crawler.extract_keywords(original_body)
         for i in range(len(body)):
             original_body_word = original_body[i]
+            if(original_body_word not in body_keywords_dict.keys()):
+                continue
             body_word = body[i]
             if(body_word not in body_index):
                 body_index[body_word].append([page["page_id"], body_keywords_dict[original_body_word]["frequency"], body_keywords_dict[original_body_word]["positions"]])
@@ -134,6 +113,8 @@ def indexing(crawled_result):
         for(word, page_list) in body_index.items():
             for page in page_list:
                     file.write("word: " + word + " page: " + str(page[0]) + " count: " + str(page[1]) + "positions: " + str(page[2]) + "\n")
+    
+    database.insert_index(body_index, title_index)
     return body_index, title_index
 
 
