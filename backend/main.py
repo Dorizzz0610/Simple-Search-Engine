@@ -7,6 +7,7 @@ from flask import Flask, request, jsonify, render_template, redirect, url_for, s
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 
+DATABASE = False
 
 def handle_query(query):
     single_terms = []
@@ -87,7 +88,7 @@ def main(query, starting_url, MAX_PAGES):
 
     # Step 1: Crawl the pages
     print("Crawling the pages...")
-    crawled_result = crawler.crawl(starting_url, MAX_PAGES) # store based on id 
+    crawled_result = crawler.crawl(starting_url, MAX_PAGES, DATABASE) # store based on id 
     print(crawled_result)
 
 
@@ -95,9 +96,9 @@ def main(query, starting_url, MAX_PAGES):
     print("Indexing the pages...")
 
 
-    body_index, title_index = indexer.indexing(crawled_result)
+    body_index, title_index = indexer.indexing(crawled_result, DATABASE)
     print(body_index)
-    database.export_tables()
+    if (DATABASE): database.export_tables()
 
 
     # Step 3: Search the query
@@ -124,7 +125,7 @@ def main(query, starting_url, MAX_PAGES):
         for parent in crawled_result[doc_id]["parents"]:
             current_result.append("    " + parent)
             count += 1
-            if count == 5:
+            if count == 10:
                 current_result.append("    ......\n")
                 break
 
@@ -133,7 +134,7 @@ def main(query, starting_url, MAX_PAGES):
         for child in crawled_result[doc_id]["children"]:
             current_result.append("    " + child)
             count += 1
-            if count == 5:
+            if count == 10:
                 current_result.append("    ......\n")
                 break
         current_result.append('\n')

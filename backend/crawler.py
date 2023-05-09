@@ -120,7 +120,7 @@ def extract_keywords(allwords):
     return keywords
 
 
-def store(crawled_result, url, page):
+def store(crawled_result, url, page, DATABASE):
     
     if url in crawled_result and "last_modified" in crawled_result[url] and crawled_result[url]["last_modified"] != "":
         time1 = datetime.strptime(crawled_result[url]["last_modified"], "%a, %d %b %Y %H:%M:%S %Z")
@@ -138,7 +138,7 @@ def store(crawled_result, url, page):
             "children": page.children,
             "parents": page.parents
         }
-    # database.insert_page(crawled_result, page, url)
+    if(DATABASE): database.insert_page(crawled_result, page, url)
     
     return crawled_result
 
@@ -165,9 +165,9 @@ def top_n_keywords(keywords, n):
     return top_n
 
 
-def crawl(url, max_pages):
+def crawl(url, max_pages, DATABASE):
 
-    # database.create_tables()
+    if(DATABASE): database.create_tables()
 
     crawl_list = [url]
     crawled_list = []
@@ -191,7 +191,7 @@ def crawl(url, max_pages):
 
             crawled_list.append(current_url)
             count += 1
-            crawled_result = store(crawled_result, current_url, current_page)
+            crawled_result = store(crawled_result, current_url, current_page, DATABASE)
 
     for url in crawled_result:  
         if "children" in crawled_result[url]:

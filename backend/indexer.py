@@ -46,7 +46,7 @@ def stem(text, is_phrase):
     return stemmed_text       
                 
 
-def indexing(crawled_result):
+def indexing(crawled_result, DATABASE):
     # indexing the keywords and body of a set of crawled pages    
     body_index = defaultdict(list)
     title_index = defaultdict(list)
@@ -114,7 +114,7 @@ def indexing(crawled_result):
             for page in page_list:
                     file.write("word: " + word + " page: " + str(page[0]) + " count: " + str(page[1]) + "positions: " + str(page[2]) + "\n")
     
-    database.insert_index(body_index, title_index)
+    if(DATABASE): database.insert_index(body_index, title_index)
     return body_index, title_index
 
 
