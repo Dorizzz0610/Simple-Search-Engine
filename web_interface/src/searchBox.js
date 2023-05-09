@@ -52,7 +52,9 @@ function SearchBox(props) {
         <input type="text" value={maxPages} onChange={handleMaxPagesChange} />
       </label>
       <br />
-      <button type="submit">Submit</button>
+      <button type="submit" disabled={props.isSearchButtonDisabled}>
+        Submit
+      </button>
       {isLoading && <Loading />}
     </form>
   )

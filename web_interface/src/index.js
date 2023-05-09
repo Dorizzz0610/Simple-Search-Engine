@@ -4,6 +4,7 @@ import './index.css'
 import reportWebVitals from './reportWebVitals'
 import SearchBox from './searchBox'
 import SearchResult from './searchResult'
+import Loading from './Loading'
 
 import io from 'socket.io-client'
 
@@ -13,11 +14,13 @@ function App() {
   const [searchResults, setSearchResults] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [searchStatus, setSearchStatus] = useState('')
+  const [isSearchButtonDisabled, setIsSearchButtonDisabled] = useState(false)
 
   useEffect(() => {
     socket.on('search_start', () => {
       setSearchStatus('Searching...')
       setIsLoading(true)
+      setIsSearchButtonDisabled(true)
     })
     socket.on('search_results', (results) => {
       console.log('search_results:', results)
@@ -25,6 +28,7 @@ function App() {
         setSearchResults(JSON.parse(results))
         setSearchStatus('')
         setIsLoading(false)
+        setIsSearchButtonDisabled(false)
       } catch (error) {
         console.error('Failed to parse JSON:', error)
       }
@@ -43,9 +47,14 @@ function App() {
 
   return (
     <div>
-      <SearchBox onSubmit={handleSearchSubmit} setIsLoading={setIsLoading} />
+      <SearchBox
+        onSubmit={handleSearchSubmit}
+        setIsLoading={setIsLoading}
+        isSearchButtonDisabled={isSearchButtonDisabled}
+      />
       {searchStatus && <div>{searchStatus}</div>}
-      <SearchResult results={searchResults} />
+      {searchResults.length > 0 && <SearchResult results={searchResults} />}
+      {isLoading && <Loading />}
     </div>
   )
 }

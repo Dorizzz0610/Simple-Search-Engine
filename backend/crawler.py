@@ -33,34 +33,6 @@ def get_head(url):
         return head
     except:
         return None
-    
-
-def extract_keywords(words):
-    keywords = {}
-    exclude = set(string.punctuation).union("|") # Set of punctuation marks
-    word_id = 0
-
-    for word in words:
-        word = word.strip().lower()
-        word = ''.join(ch for ch in word if ch not in exclude)
-    
-
-    for position, word in enumerate(words):
-        if word in keywords:
-            keywords[word]["frequency"] += 1
-            keywords[word]["positions"].append(position)
-        else:
-            keywords[word] = {}
-            keywords[word]["frequency"] = 1
-            keywords[word]["word_id"] = word_id
-            keywords[word]["positions"] = [position]
-            word_id += 1
-
-    return keywords
-
-def top_n_keywords(keywords, n):
-    top_keywords = sorted(keywords.items(), key=lambda x: x[1]["frequency"], reverse=True)
-    return top_keywords[:n]
 
 # Extract the HTML content of the URL
 def extract(url):
@@ -77,10 +49,14 @@ def extract(url):
     # Last modified time
     head = get_head(url)
     last_modified = head.headers.get('Last-Modified')
-    if last_modified is not None and last_modified > "":
-        last_modified = last_modified
-    else:
-        last_modified = ""
+    if last_modified is None or last_modified == "":
+        # Use the date field instead of Last-Modified
+        date_str = head.headers.get('date')
+        if date_str is not None and date_str > "":
+            date = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %Z')
+            last_modified = date.strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            last_modified = ""
 
     # Page size
     size = len(response)
@@ -90,7 +66,6 @@ def extract(url):
 
     # Children links in the page
     children = []
-    parsed_url = urlparse(url)
     base_url = url[:url.rfind("/") + 1]
 
     
@@ -108,6 +83,43 @@ def extract(url):
     return result
 
 
+
+def extract_keywords(allwords):
+    keywords = {}
+    exclude = set(string.punctuation).union('|').union('&') # Set of punctuation marks
+    word_id = 0
+
+    words = []
+
+    for word in allwords:
+        word = word.lower()
+        word = ''.join(ch for ch in word if ch not in exclude)
+        words.append(word)
+
+    STOPWORDS = set()
+    with open('.\stopwords.txt', 'r') as file:
+        for line in file:
+            word = line.strip()
+            if word:
+                STOPWORDS.add(word)
+
+    for position, word in enumerate(words):
+        if word in STOPWORDS:
+            continue
+        if word in keywords:
+            keywords[word]["frequency"] += 1
+            keywords[word]["positions"].append(position)
+        else:
+            keywords[word] = {}
+            keywords[word]["frequency"] = 1
+            keywords[word]["word_id"] = word_id
+            keywords[word]["positions"] = [position]
+            word_id += 1
+        
+
+    return keywords
+
+
 def store(crawled_result, url, page):
     
     if url in crawled_result and "last_modified" in crawled_result[url] and crawled_result[url]["last_modified"] != "":
@@ -116,7 +128,6 @@ def store(crawled_result, url, page):
         if time1 < time2: # if time1 is later
             return crawled_result
     
-    # database.insert_page(crawled_result, page, url)
 
     crawled_result[url] = {
             "page_id": page.id,
@@ -127,6 +138,7 @@ def store(crawled_result, url, page):
             "children": page.children,
             "parents": page.parents
         }
+    # database.insert_page(crawled_result, page, url)
     
     return crawled_result
 
@@ -138,6 +150,19 @@ def store_based_on_id(crawled_result):
         new_crawled_result[crawled_result[url]["page_id"]]["url"] = url
     return new_crawled_result
 
+def top_n_keywords(keywords, n):
+    # keywords: dict, key is a word, value is a dict with keys "frequency", "word_id", "positions"
+    sorted_keywords = sorted(keywords.items(), key=lambda x: x[1]["frequency"], reverse=True)
+    top_n = []
+    count = 0
+    for keyword in sorted_keywords:
+        if count >= n:
+            break
+        if keyword[0].strip() != "":
+            top_n.append(keyword[0])
+            count += 1
+
+    return top_n
 
 
 def crawl(url, max_pages):
@@ -152,7 +177,6 @@ def crawl(url, max_pages):
 
     while crawl_list and count < max_pages:
         current_url = crawl_list.pop(0)
-        print("CRAWLING current_url: ", current_url)
         if current_url in crawled_list:
             continue
         if(get_response(current_url)):
@@ -160,7 +184,6 @@ def crawl(url, max_pages):
             current_page.id = count
             crawled_result[current_url] = {}
             crawled_result[current_url]["children"] = current_page.children
-            print("children of current_url: ", current_page.children)
             if current_page.children:
                 for child in current_page.children:
                     if child not in crawled_list and child not in crawl_list: #avoid cyclic?
@@ -173,11 +196,11 @@ def crawl(url, max_pages):
     for url in crawled_result:  
         if "children" in crawled_result[url]:
             for child in crawled_result[url]["children"]:
-                if child in crawled_result.keys():
+                if child in crawled_result.keys() and url not in crawled_result[child]["parents"]:
                     crawled_result[child]["parents"].append(url)
 
 
-    create_txt(crawled_result, 'spider result.txt')
+    #create_txt(crawled_result, 'spider result.txt')
 
     crawled_result = store_based_on_id(crawled_result)
 
